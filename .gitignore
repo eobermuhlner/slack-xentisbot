@@ -16,3 +16,6 @@ bin
 *.iml
 .idea
 
+# Project specific stuff
+
+simplebot.properties
