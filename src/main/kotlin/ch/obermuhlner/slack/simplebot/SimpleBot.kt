@@ -21,16 +21,28 @@ class SimpleBot {
 	
 	val observedChannelIds = HashSet<String>()
 
-	val translations = loadPropertiesTranslations()
+	val translations: MutableList<Pair<String, String>> = loadPropertiesTranslations()
+	val xentisDbSchema = XentisDbSchema()
 	
 	fun start () {
+		val xentisSchemaFileName = properties.getProperty("xentis.schema")
+		if (xentisSchemaFileName != null) {
+			xentisDbSchema.parse(xentisSchemaFileName)
+		}
+		
+		val xentisKeyMigrationFileName = properties.getProperty("xentis.keymigration")
+		if (xentisKeyMigrationFileName != null) {
+			val xentisKeyMigration = XentisKeyMigration()
+			xentisKeyMigration.parse(xentisKeyMigrationFileName)
+			translations.addAll(xentisKeyMigration.translations)
+		}
+		
 		session.addMessagePostedListener(SlackMessagePostedListener { event, _ ->
 			if (event.sender.id != user.id) {
-				println(event.messageContent)
-				val userTag = user.tag()
-				if (event.messageContent.startsWith(userTag)) {
-					val strippedMessageContent = event.messageContent.substring(userTag.length)
-					respondToMessage(event, strippedMessageContent) 
+				val message = event.messageContent
+				val directMessage = parseCommand(user.tag(), message)
+				if (directMessage != null) {
+					respondToMessage(event, directMessage) 
 				} else if (observedChannelIds.contains(event.channel.id)) {
 					respondToMessage(event, event.messageContent) 
 				}
@@ -39,67 +51,190 @@ class SimpleBot {
 	}
 	
 	fun respondToMessage(event: SlackMessagePosted , messageContent: String) {
-		val commandArgs = messageContent.trim().split(" ")
-		if (commandArgs.size == 0) {
+		println(messageContent)
+		
+		val help = parseCommand("help", messageContent)
+		if (help != null || messageContent.trim() == "") {
+			respondHelp(event)
+			return
+		}
+
+		val translateText = parseCommand("translate", messageContent)
+		if (translateText != null) {
+			respondSearchTranslations(event, translateText)
 			return
 		}
 		
-		val command = commandArgs[0]
-		when (command) {
-			"observe" -> {
-				observedChannelIds.add(event.channel.id)
-				session.sendMessage(event.channel, "Observing channel. Observing now ${observedChannelIds.size} channels.");
+		val idText = parseCommand("id", messageContent)
+		if (idText != null) {
+			val xentisId = parseXentisId(idText)
+			if (xentisId != null) {
+				respondAnalyzeXentisId(event, idText, xentisId)
+			} else {
+				session.sendMessage(event.channel, "This is a not a valid Xentis id: $idText. It must be 16 hex digits.")
 			}
-			"ignore" -> {
-				observedChannelIds.remove(event.channel.id)
-				session.sendMessage(event.channel, "Ignoring channel. Observing now ${observedChannelIds.size} channels.");
+			return
+		}
+
+		val classPartText = parseCommand("classpart", messageContent)
+		if (classPartText != null) {
+			val xentisId = parseXentisId(classPartText, 4)
+			if (xentisId != null) {
+				respondAnalyzeXentisClassPart(event, classPartText)
+			} else {
+				session.sendMessage(event.channel, "This is a not a valid Xentis classpart: $classPartText. It must be 4 hex digits.")
 			}
-			"search" -> {
-				search(event, commandArgs)
-			}
-			else -> {
-				session.sendMessage(event.channel, messageContent + " (REPLY)")
-			}
+			return
+		}
+
+		val tableName = parseCommand("table", messageContent)
+		if (tableName != null) {
+			respondXentisTableName(event, tableName)
+			return
+		}
+		
+		val xentisId = parseXentisId(messageContent)
+		if (xentisId != null) {
+			respondAnalyzeXentisId(event, messageContent, xentisId)
+			return
+		}
+		
+		val xentisClassPart = parseXentisId(messageContent, 4)
+		if (xentisClassPart != null) {
+			respondAnalyzeXentisClassPart(event, messageContent)
+			return
+		}
+		
+		respondXentisTableName(event, messageContent)
+		respondSearchTranslations(event, messageContent)
+	}
+	
+	private fun parseXentisId(text: String, length: Int = 16): Long? {
+		if (text.length != length) {
+			return null
+		} 
+		
+		try {
+			return java.lang.Long.parseLong(text, 16)
+		} catch (ex: NumberFormatException) {
+			return null
 		}
 	}
 	
-	private fun search(event: SlackMessagePosted, args: List<String>) {
+	private fun parseCommand(command: String, line: String): String? {
+		if (line.startsWith(command)) {
+			return line.substring(command.length).trim()
+		}
+		return null
+	}
+	
+	private fun respondHelp(event: SlackMessagePosted) {
+		val bot = "@" + user.userName
+		session.sendMessage(event.channel, """
+				|You can ask me questions by giving me a command with an appropriate argument.
+				|Try it out by asking one of the following lines (just copy and paste into a new message):
+				|$bot help
+				|$bot id 108300000012be3c
+				|$bot classpart 1083
+				|$bot table portfolio
+				|$bot translate interest
+				|
+				|If you talk with me without specifying a command, I will try to answer as best as I can (maybe giving multiple answers).
+				|Please try one of the following:
+				|$bot 108300000012be3c
+				|$bot 1083
+				|$bot portfolio
+				|$bot interest
+				""".trimMargin())
+	}
+	
+	private fun respondAnalyzeXentisId(event: SlackMessagePosted, text: String, id: Long) {
+		session.sendMessage(event.channel, "This is a Xentis id: $text = decimal $id")
+		
+		respondAnalyzeXentisClassPart(event, text)
+	}
+	
+	private fun respondAnalyzeXentisClassPart(event: SlackMessagePosted, text: String) {
+		val xentisClassPartText = text.substring(0, 4)
+		val xentisClassPart = java.lang.Long.parseLong(xentisClassPartText, 16) and 0xff
+		val tableName = xentisDbSchema.getTableName(xentisClassPart)
+		if (tableName != null) {
+			session.sendMessage(event.channel, "The classpart $xentisClassPartText indicates a Xentis table $tableName")
+		} else {
+			session.sendMessage(event.channel, "This is not a Xentis classpart: $xentisClassPartText.")
+		}
+	}
+	
+	private fun respondXentisTableName(event: SlackMessagePosted, text: String) {
+		val tableId = xentisDbSchema.getTableId(text)
+		if (tableId != null) {
+			val xentisClassPartText = (tableId or 0x1000).toString(16).padStart(4, '0')
+			session.sendMessage(event.channel, "The classpart of the Xentis table ${text.toUpperCase()} is $xentisClassPartText")
+		} else {
+			session.sendMessage(event.channel, "This is not a Xentis table: ${text.toUpperCase()}.")
+		}
+	}
+	
+	private fun respondSearchTranslations(event: SlackMessagePosted, text: String) {
+		if (text == "") {
+			session.sendMessage(event.channel, "Nothing to translate.")
+			return
+		}
+		
 		val perfectResults = HashSet<String>()
 		val partialResults = HashSet<String>()
 		for((source, target) in translations) {
-			if (source == args[1]) {
+			if (source.equals(text, ignoreCase=true)) {
 				perfectResults.add(target)
 			}
-			if (target == args[1]) {
+			if (target.equals(text, ignoreCase=true)) {
 				perfectResults.add(source)
 			}
-			if (source.contains(args[1])) {
+			if (source.contains(text, ignoreCase=true)) {
 				partialResults.add(target)
 			}
-			if (target.contains(args[1])) {
+			if (target.contains(text, ignoreCase=true)) {
 				partialResults.add(source)
 			}
 		}
 
-		var message = ""
+		var message: String
 		if (perfectResults.size > 0) {
-			message = "_Found ${perfectResults.size} perfect matches:_\n"
-			for (result in perfectResults) {
+			val translations = plural(perfectResults.size, "translation", "translations")
+			message = "_Found ${perfectResults.size} $translations for exactly this term:_\n"
+			for (result in limit(perfectResults)) {
 				message += result + "\n"
 			}
 		} else if (partialResults.size > 0) {
-			message = "_Found ${partialResults.size} partial matches:_\n"
-			for (result in partialResults) {
+			val translations = plural(perfectResults.size, "translation", "translations")
+			message = "_Found ${partialResults.size} $translations that partially matched this term:_\n"
+			for (result in limit(partialResults)) {
 				message += result + "\n"
 			}
 		} else {
-			message = "_Nothing found._"
+			message = "_No translations found._"
 		}
 		
 		session.sendMessage(event.channel, message)
 	}
+	
+	private fun limit(collection: Collection<String>, maxCount: Int = 10): Collection<String> {
+		val result = ArrayList<String>()
+		val n = Math.min(collection.size, maxCount)
+		
+		val iter = collection.iterator()
+		for(i in 1..n) {
+			result.add(iter.next())
+		}
+		
+		if (n < collection.size) {
+			result.add("...")
+		}
+		
+		return result 
+	} 
 
-	private fun loadPropertiesTranslations(): List<Pair<String, String>> {
+	private fun loadPropertiesTranslations(): MutableList<Pair<String, String>> {
 		val result = ArrayList<Pair<String, String>>()
 		
 		var translationIndex = 0
@@ -142,6 +277,14 @@ fun loadProperties(name: String): Properties {
 	}
 
 	return properties
+}
+
+fun plural(count: Int, singular: String, plural: String): String {
+	if (count == 1) {
+		return singular
+	} else {
+		return plural
+	}
 }
 
 fun SlackUser.tag() = "<@" + this.id + ">" 
