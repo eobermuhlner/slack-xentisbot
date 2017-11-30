@@ -43,7 +43,7 @@ class SimpleBot {
 				val directMessage = parseCommand(user.tag(), message)
 				if (directMessage != null) {
 					respondToMessage(event, directMessage) 
-				} else if (observedChannelIds.contains(event.channel.id)) {
+				} else if (event.channel.isDirect || observedChannelIds.contains(event.channel.id)) {
 					respondToMessage(event, event.messageContent) 
 				}
 			}
@@ -105,7 +105,7 @@ class SimpleBot {
 			return
 		}
 		
-		respondXentisTableName(event, messageContent)
+		respondXentisTableName(event, messageContent, failMessage=false)
 		respondSearchTranslations(event, messageContent)
 	}
 	
@@ -145,6 +145,8 @@ class SimpleBot {
 				|$bot 1083
 				|$bot portfolio
 				|$bot interest
+				|
+				|If you talk with me in a direct chat you do not need to prefix the messages with my name $bot.
 				""".trimMargin())
 	}
 	
@@ -165,13 +167,15 @@ class SimpleBot {
 		}
 	}
 	
-	private fun respondXentisTableName(event: SlackMessagePosted, text: String) {
+	private fun respondXentisTableName(event: SlackMessagePosted, text: String, failMessage: Boolean = true) {
 		val tableId = xentisDbSchema.getTableId(text)
 		if (tableId != null) {
 			val xentisClassPartText = (tableId or 0x1000).toString(16).padStart(4, '0')
 			session.sendMessage(event.channel, "The classpart of the Xentis table ${text.toUpperCase()} is $xentisClassPartText")
 		} else {
-			session.sendMessage(event.channel, "This is not a Xentis table: ${text.toUpperCase()}.")
+			if (failMessage) {
+				session.sendMessage(event.channel, "This is not a Xentis table: ${text.toUpperCase()}.")
+			}
 		}
 	}
 	
