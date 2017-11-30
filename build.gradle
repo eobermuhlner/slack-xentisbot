@@ -2,7 +2,7 @@ apply plugin: 'kotlin'
 apply plugin: 'application'
 apply plugin: 'eclipse'
 
-mainClassName = "ch.obermuhlner.slack.simplebot.SlackSimpleBotKt"
+mainClassName = "ch.obermuhlner.slack.simplebot.SimpleBotKt"
 
 buildscript {
     ext.kotlin_version = '1.1.3'
