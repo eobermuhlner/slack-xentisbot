@@ -7,63 +7,112 @@ import org.xml.sax.Attributes
 
 class XentisDbSchema {
 
-	val tableIdToTableName = mutableMapOf<Long, String?>()
-	val tableNameToTableId = mutableMapOf<String, Long?>()
+	val tableNameToTable = mutableMapOf<String, DbTable?>()
+	val tableIdToTable = mutableMapOf<Long, DbTable?>()
 		
 	fun parse(schemaFile: String) {
 		val factory = SAXParserFactory.newInstance()
 		val parser = factory.newSAXParser()
 		
 		val handler = object: DefaultHandler() {
-			var tableName = ""
-			var tableId = 0L
-			var columnName = ""
-			var formatOracle = ""
-			var formatXentis = ""
-			var formatSize = 0
-			var foreignKeyName = ""
+			var table: DbTable = DbTable("?", 0)
+			var column: DbColumn = DbColumn("?")
+			var currentElementName: String? = null
 			
 			override fun startElement(uri: String, localName: String, qName: String, attributes: Attributes) {
+				currentElementName = qName
 				when (qName) {
 					"Table" -> {
-						tableName = attributes.getValue("name")
-						tableId = java.lang.Long.parseLong(attributes.getValue("id"))
+						table = DbTable(attributes.getValue("name"), parseLong(attributes.getValue("id")))
+						tableNameToTable[table.name] = table
+						tableIdToTable[table.id] = table
 						
-						tableIdToTableName[tableId] = tableName
-						tableNameToTableId[tableName] = tableId
-						// TODO clear list of columns
 					}
 					"Column" -> {
-						columnName = attributes.getValue("name")
+						column = DbColumn(attributes.getValue("name"))
+						table.columns.add(column)
 					}
 					"Format" -> {
-						formatOracle = attributes.getValue("oracle")
-						formatXentis = attributes.getValue("xentis")
-						//formatSize = java.lang.Integer.parseInt(attributes.getValue("xentis", "0"))
+						column.oracleType = attributes.getValue("oracle")
+						column.xentisType = attributes.getValue("xentis") 
+						column.size = parseInt(attributes.getValue("size"))
 					}
 					"ForeignKey" -> {
-						foreignKeyName = attributes.getValue("name")
+					}
+				}
+			}
+			
+			override fun characters(chars: CharArray, start: Int, length: Int) {
+				val text = String(chars, start, length)
+				when(currentElementName) {
+					"Reference" -> {
+						column.references.add(text)
+					}
+					"ForeignKey" -> {
+						column.foreignKey = text
 					}
 				}
 			}
 			
 			override fun endElement(uri: String, localName: String, qName: String) {
-				when (qName) {
-					"Table" -> {
-						// TODO parse end of table
-					}
-				}
+				currentElementName = null
 			}
 		}
 		
 		parser.parse(File(schemaFile), handler)
 	}
 	
+	fun parseLong(text: String?, defaultValue: Long = 0): Long {
+		if (text == null) {
+			return defaultValue
+		}
+		return java.lang.Long.parseLong(text)
+	}
+	
+	fun parseInt(text: String?, defaultValue: Int = 0): Int {
+		if (text == null) {
+			return defaultValue
+		}
+		return java.lang.Integer.parseInt(text)
+	}
+	
 	fun getTableName(tableId: Long): String? {
-		return tableIdToTableName[tableId]
+		return tableIdToTable[tableId]?.name
 	}
 	
 	fun getTableId(tableName: String): Long? {
-		return tableNameToTableId[tableName.toUpperCase()]
+		return tableNameToTable[tableName.toUpperCase()]?.id
+	}
+	
+	fun getTable(tableName: String): DbTable? {
+		return tableNameToTable[tableName]
 	}
 }
+
+data class DbTable(
+		val name: String,
+		val id: Long,
+		val columns: MutableList<DbColumn> = mutableListOf()) {
+	fun toMessage(): String {
+		var message = "TABLE $name\n"
+		
+		for(column in columns) {
+			val sizeText = if (column.size == 0) "" else "[${column.size}]"
+			val foreignKeyText = if (column.foreignKey == null) "" else " => ${column.foreignKey}"
+			val referencesText = if (column.references.size == 0) "" else " -> ${column.references}"
+			message += "    %-30s : %-10s (${column.xentisType})$foreignKeyText$referencesText\n"
+					.format(column.name, "${column.oracleType}$sizeText")
+		}
+		
+		return message
+	}
+}
+
+data class DbColumn(
+		val name: String,
+		var oracleType: String = "",
+		var xentisType: String = "",
+		var size: Int = 0,
+		var foreignKey: String? = null,
+		val references: MutableList<String> = mutableListOf())
+

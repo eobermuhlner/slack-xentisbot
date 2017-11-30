@@ -48,6 +48,8 @@ class SimpleBot {
 				}
 			}
 		})
+		
+		println("Ready")
 	}
 	
 	fun respondToMessage(event: SlackMessagePosted , messageContent: String) {
@@ -173,13 +175,20 @@ class SimpleBot {
 	}
 	
 	private fun respondXentisTableName(event: SlackMessagePosted, text: String, failMessage: Boolean = true) {
-		val tableId = xentisDbSchema.getTableId(text)
+		val tableName = text.toUpperCase()
+		
+		val table = xentisDbSchema.getTable(tableName)
+		if (table != null) {
+			session.sendFile(event.channel, table.toMessage().toByteArray(), "TABLE_$tableName.txt")
+		}
+		
+		val tableId = xentisDbSchema.getTableId(tableName)
 		if (tableId != null) {
 			val xentisClassPartText = (tableId or 0x1000).toString(16).padStart(4, '0')
-			session.sendMessage(event.channel, "The classpart of the Xentis table ${text.toUpperCase()} is $xentisClassPartText")
+			session.sendMessage(event.channel, "The classpart of the Xentis table $tableName is $xentisClassPartText")
 		} else {
 			if (failMessage) {
-				session.sendMessage(event.channel, "This is not a Xentis table: ${text.toUpperCase()}.")
+				session.sendMessage(event.channel, "This is not a Xentis table: $tableName.")
 			}
 		}
 	}
