@@ -147,6 +147,11 @@ class SimpleBot {
 				|$bot interest
 				|
 				|If you talk with me in a direct chat you do not need to prefix the messages with my name $bot.
+				|Please try one of the following:
+				|108300000012be3c
+				|1083
+				|portfolio
+				|interest
 				""".trimMargin())
 	}
 	
@@ -257,7 +262,11 @@ class SimpleBot {
 				
 				for(key in translations1.keys) {
 					if(key is String) {
-						result.add(Pair(translations1.getProperty(key), translations2.getProperty(key)))
+						val translation1 = translations1.getProperty(key)
+						val translation2 = translations2.getProperty(key)
+						if (translation1 != null && translation2 != null) {
+							result.add(Pair(translation1, translation2))
+						} 
 					}
 				}
 			}
