@@ -23,6 +23,7 @@ class SimpleBot {
 
 	val translations: MutableList<Pair<String, String>> = loadPropertiesTranslations()
 	val xentisDbSchema = XentisDbSchema()
+	val xentisKeyMigration = XentisKeyMigration()
 	
 	fun start () {
 		val xentisSchemaFileName = properties.getProperty("xentis.schema")
@@ -32,7 +33,6 @@ class SimpleBot {
 		
 		val xentisKeyMigrationFileName = properties.getProperty("xentis.keymigration")
 		if (xentisKeyMigrationFileName != null) {
-			val xentisKeyMigration = XentisKeyMigration()
 			xentisKeyMigration.parse(xentisKeyMigrationFileName)
 			translations.addAll(xentisKeyMigration.translations)
 		}
@@ -98,6 +98,12 @@ class SimpleBot {
 		val tableName = parseCommand("table", messageContent)
 		if (tableName != null) {
 			respondXentisTableName(event, tableName)
+			return
+		}
+		
+		val keyId = parseCommand("key", messageContent)
+		if (keyId != null) {
+			respondXentisKey(event, keyId)
 			return
 		}
 		
@@ -218,7 +224,27 @@ class SimpleBot {
 		
 		session.sendMessage(event.channel, message)
 	}
-	
+
+	private fun respondXentisKey(event: SlackMessagePosted, text: String, failMessage: Boolean = true) {
+		val id = text.toIntOrNull()
+		if (id == null) {
+			if (failMessage) {
+				session.sendMessage(event.channel, "Not a valid Xentis key id (must be an integer value): $text")
+			}
+			return
+		}
+		
+		val keyNode = xentisKeyMigration.getKeyNode(id)
+		if (keyNode == null) {
+			if (failMessage) {
+				session.sendMessage(event.channel, "No Xentis key node found for id: $id")
+			}
+			return
+		}
+		
+		session.sendMessage(event.channel, keyNode.toMessage())
+	}
+		
 	private fun respondSearchTranslations(event: SlackMessagePosted, text: String) {
 		if (text == "") {
 			session.sendMessage(event.channel, "Nothing to translate.")
