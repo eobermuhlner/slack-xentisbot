@@ -62,14 +62,14 @@ class XentisDbSchema {
 		parser.parse(File(schemaFile), handler)
 	}
 	
-	fun parseLong(text: String?, defaultValue: Long = 0): Long {
+	private fun parseLong(text: String?, defaultValue: Long = 0): Long {
 		if (text == null) {
 			return defaultValue
 		}
 		return java.lang.Long.parseLong(text)
 	}
 	
-	fun parseInt(text: String?, defaultValue: Int = 0): Int {
+	private fun parseInt(text: String?, defaultValue: Int = 0): Int {
 		if (text == null) {
 			return defaultValue
 		}
