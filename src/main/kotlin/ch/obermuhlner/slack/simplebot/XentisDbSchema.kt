@@ -7,8 +7,8 @@ import org.xml.sax.Attributes
 
 class XentisDbSchema {
 
-	val tableNameToTable = mutableMapOf<String, DbTable?>()
-	val tableIdToTable = mutableMapOf<Long, DbTable?>()
+	private val tableNameToTable = mutableMapOf<String, DbTable?>()
+	private val tableIdToTable = mutableMapOf<Long, DbTable?>()
 		
 	fun parse(schemaFile: String) {
 		val factory = SAXParserFactory.newInstance()
@@ -109,9 +109,8 @@ data class DbTable(
 		
 		for(column in columns) {
 			val sizeText = if (column.size == 0) "" else "[${column.size}]"
-			val foreignKeyText = if (column.foreignKey == null) "" else " => ${column.foreignKey}"
 			val referencesText = if (column.references.size == 0) "" else " -> ${column.references}"
-			message += "    %-30s : %-10s (${column.xentisType})$foreignKeyText$referencesText\n"
+			message += "    %-30s : %-10s (${column.xentisType})${column.foreignKey.orEmpty()}$referencesText\n"
 					.format(column.name, "${column.oracleType}$sizeText")
 		}
 		

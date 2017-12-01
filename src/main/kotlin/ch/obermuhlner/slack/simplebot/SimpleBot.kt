@@ -21,7 +21,7 @@ class SimpleBot {
 	
 	val observedChannelIds = HashSet<String>()
 
-	val translations: MutableList<Pair<String, String>> = loadPropertiesTranslations()
+	val translations: MutableSet<Pair<String, String>> = loadPropertiesTranslations()
 	val xentisDbSchema = XentisDbSchema()
 	val xentisKeyMigration = XentisKeyMigration()
 	
@@ -34,7 +34,7 @@ class SimpleBot {
 		val xentisKeyMigrationFileName = properties.getProperty("xentis.keymigration")
 		if (xentisKeyMigrationFileName != null) {
 			xentisKeyMigration.parse(xentisKeyMigrationFileName)
-			translations.addAll(xentisKeyMigration.translations)
+			translations.addAll(xentisKeyMigration.getAllTranslations())
 		}
 		
 		session.addMessagePostedListener(SlackMessagePostedListener { event, _ ->
@@ -272,13 +272,13 @@ class SimpleBot {
 		if (perfectResults.size > 0) {
 			val translations = plural(perfectResults.size, "translation", "translations")
 			message = "_Found ${perfectResults.size} $translations for exactly this term:_\n"
-			for (result in limit(perfectResults)) {
+			for (result in limit(sortedList(perfectResults))) {
 				message += result + "\n"
 			}
 		} else if (partialResults.size > 0) {
 			val translations = plural(perfectResults.size, "translation", "translations")
 			message = "_Found ${partialResults.size} $translations that partially matched this term:_\n"
-			for (result in limit(partialResults)) {
+			for (result in limit(sortedList(partialResults))) {
 				message += result + "\n"
 			}
 		} else {
@@ -286,6 +286,12 @@ class SimpleBot {
 		}
 		
 		session.sendMessage(event.channel, message)
+	}
+	
+	private fun sortedList(collection: Collection<String>): List<String> {
+		val list: MutableList<String> = mutableListOf()
+		list.addAll(collection)
+		return list.sortedWith(compareBy({ it.length }, { it }))
 	}
 	
 	private fun limit(collection: Collection<String>, maxCount: Int = 10): Collection<String> {
@@ -304,8 +310,8 @@ class SimpleBot {
 		return result 
 	} 
 
-	private fun loadPropertiesTranslations(): MutableList<Pair<String, String>> {
-		val result = ArrayList<Pair<String, String>>()
+	private fun loadPropertiesTranslations(): MutableSet<Pair<String, String>> {
+		val result: MutableSet<Pair<String, String>> = mutableSetOf()
 		
 		var translationIndex = 0
 		

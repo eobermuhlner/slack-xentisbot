@@ -6,9 +6,7 @@ import org.xml.sax.Attributes
 import java.io.File
 
 class XentisKeyMigration {
-	val translations: MutableList<Pair<String, String>> = mutableListOf()
-	
-	val idToKeyNode: MutableMap<Int, KeyNode> = mutableMapOf()
+	private val idToKeyNode: MutableMap<Int, KeyNode> = mutableMapOf()
 	
 	fun parse(keyMigrationFile: String) {
 		val factory = SAXParserFactory.newInstance()
@@ -63,12 +61,6 @@ class XentisKeyMigration {
 				when (qName) {
 					"children" -> {
 						keyNodeStack.removeAt(keyNodeStack.lastIndex)
-						
-						val german = currentTranslation["DE"]
-						val english = currentTranslation["EN"]
-						if (german != null && english != null) {
-							translations.add(Pair(german, english))
-						}
 					}
 					"keyMapping" -> {
 						currentKeyMapping = null
@@ -79,12 +71,47 @@ class XentisKeyMigration {
 		
 		parser.parse(File(keyMigrationFile), handler)
 	}
-
+	
 	private fun parseInt(text: String?, defaultValue: Int = 0): Int {
 		if (text == null) {
 			return defaultValue
 		}
 		return java.lang.Integer.parseInt(text)
+	}
+	
+	fun getAllTranslations(): Set<Pair<String, String>> {
+		val result: MutableSet<Pair<String, String>> = mutableSetOf()
+		
+		for (keyNode in idToKeyNode.values) {
+			result.addAll(toGermanEnglishTranslations(keyNode.translations))
+			
+			for (keyMapping in keyNode.mappings) {
+				result.addAll(toGermanEnglishTranslations(keyMapping.translations))
+			}
+		}
+		
+		return result
+	}
+	
+	private fun toGermanEnglishTranslations(translations: Collection<KeyTranslation>): Set<Pair<String, String>> {
+		val result: MutableSet<Pair<String, String>> = mutableSetOf()
+
+		val translationMap: MutableMap<Pair<String, String?>, String> = mutableMapOf()
+		val translationTypes: MutableSet<String?> = mutableSetOf()
+		for (translation in translations) {
+			translationMap[Pair(translation.language, translation.type)] = translation.text
+			translationTypes.add(translation.type)
+		}
+		
+		for (translationType in translationTypes) {
+			val english = translationMap[Pair("EN", translationType)] 
+			val german = translationMap[Pair("DE", translationType)]
+			if (english != null && german != null) {
+				result.add(Pair(english, german))
+			} 
+		}
+		
+		return result
 	}
 	
 	fun getKeyNode(id: Int): KeyNode? {
@@ -101,21 +128,20 @@ class XentisKeyMigration {
 			val translations: MutableList<KeyTranslation> = mutableListOf()) {
 		
 		fun toMessage(): String {
-			val typeText = if (type == null) "" else type
-			var message = "Key $id $name $typeText\n"
-			message += "    parent $parent\n"
+			var message = "Key $id $name ${type.orEmpty()}\n"
+			if (parent != null) {
+				message += "    parent $parent\n"
+			}
 			message += "    children $children\n"
 			
 			for(translation in translations.sortedWith(compareBy(KeyTranslation::language, KeyTranslation::type))) {
-				val translationTypeText = if (translation.type == null) "" else  translation.type
-				message += "    translation ${translation.language} ${translationTypeText} : ${translation.text} \n"
+				message += "    translation ${translation.language} ${translation.type.orEmpty()} : ${translation.text} \n"
 			}
 
 			for(keyMapping in mappings.sortedWith(compareBy(KeyMapping::id))) {
 				message += "    keyMapping ${keyMapping.id}\n"
 				for(translation in keyMapping.translations.sortedWith(compareBy(KeyTranslation::language, KeyTranslation::type))) {
-				val translationTypeText = if (translation.type == null) "" else  translation.type
-					message += "        translation ${translation.language} ${translationTypeText} : ${translation.text} \n"
+					message += "        translation ${translation.language} ${translation.type.orEmpty()} : ${translation.text} \n"
 				}
 			}
 								
@@ -130,6 +156,5 @@ class XentisKeyMigration {
 	data class KeyTranslation(
 			val language: String,
 			val type: String?,
-			val text: String
-	)
+			val text: String)
 }
