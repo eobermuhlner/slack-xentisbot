@@ -76,6 +76,17 @@ class XentisDbSchema {
 		return java.lang.Integer.parseInt(text)
 	}
 	
+	fun getTableNames(partialTableName: String): List<String> {
+		val uppercasePartialTableName = partialTableName.toUpperCase()
+		val results: MutableList<String> = mutableListOf()
+		for (tableName in tableNameToTable.keys) {
+			if (tableName.contains(uppercasePartialTableName)) {
+				results.add(tableName)
+			}
+		}
+		return results
+	}
+	
 	fun getTableName(tableId: Long): String? {
 		return tableIdToTable[tableId]?.name
 	}

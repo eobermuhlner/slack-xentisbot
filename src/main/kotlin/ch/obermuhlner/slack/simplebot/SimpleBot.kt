@@ -89,6 +89,12 @@ class SimpleBot {
 			return
 		}
 
+		val partialTableName = parseCommand("tables", messageContent)
+		if (partialTableName != null) {
+			respondXentisPartialTableName(event, partialTableName)
+			return
+		}
+		
 		val tableName = parseCommand("table", messageContent)
 		if (tableName != null) {
 			respondXentisTableName(event, tableName)
@@ -138,6 +144,7 @@ class SimpleBot {
 				|$bot help
 				|$bot id 108300000012be3c
 				|$bot classpart 1083
+				|$bot tables zuord
 				|$bot table portfolio
 				|$bot translate interest
 				|
@@ -191,6 +198,25 @@ class SimpleBot {
 				session.sendMessage(event.channel, "This is not a Xentis table: $tableName.")
 			}
 		}
+	}
+	
+	private fun respondXentisPartialTableName(event: SlackMessagePosted, text: String, failMessage: Boolean = true) {
+		val tableNames = xentisDbSchema.getTableNames(text).sorted()
+		
+		if (tableNames.isEmpty()) {
+			if (failMessage) {
+				session.sendMessage(event.channel, "_No matching tables found._")
+			}
+			return
+		}
+		
+		val tables = plural(tableNames.size, "table", "tables")
+		var message = "_Found ${tableNames.size} matching $tables._\n"
+		for(tableName in tableNames) {
+			message += tableName + "\n"
+		}
+		
+		session.sendMessage(event.channel, message)
 	}
 	
 	private fun respondSearchTranslations(event: SlackMessagePosted, text: String) {
