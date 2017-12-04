@@ -77,9 +77,9 @@ class SimpleBot {
 		
 		if (isCommand(args, "id", 1)) {
 			val idText = args[1]
-			val xentisId = parseXentisId(args[1])
+			val xentisId = parseXentisId(idText)
 			if (xentisId != null) {
-				respondAnalyzeXentisId(event, idText, xentisId)
+				respondAnalyzeXentisId(event, xentisId.first, xentisId.second)
 			} else {
 				session.sendMessage(event.channel, "This is a not a valid Xentis id: $idText. It must be 16 hex digits.")
 			}
@@ -90,7 +90,7 @@ class SimpleBot {
 			val syscodeText = args[1]
 			val xentisId = parseXentisId(syscodeText)
 			if (xentisId != null) {
-				respondXentisSysCodeId(event, xentisId)
+				respondXentisSysCodeId(event, xentisId.first)
 			} else {
 				respondXentisSysCodeText(event, syscodeText)
 			}
@@ -128,9 +128,9 @@ class SimpleBot {
 		
 		val xentisId = parseXentisId(messageContent)
 		if (xentisId != null) {
-			respondAnalyzeXentisId(event, messageContent, xentisId)
+			respondAnalyzeXentisId(event, xentisId.first, xentisId.second)
 			
-			respondXentisSysCodeId(event, xentisId, failMessage=false)
+			respondXentisSysCodeId(event, xentisId.first, failMessage=false)
 			return
 		}
 		
@@ -149,16 +149,23 @@ class SimpleBot {
 		return args.size >= (argCount + 1) && args[0] == command
 	}
 	
-	private fun parseXentisId(text: String, length: Int = 16): Long? {
-		if (text.length != length) {
+	private fun parseXentisId(text: String, length: Int = 16): Pair<Long, String>? {
+		var hexText = text
+		var id = text.toLongOrNull(16)
+
+		if (id == null) {
+			id = text.toLongOrNull(10)
+			if (id == null) {
+				return null
+			}
+			hexText = id.toString(16)
+		}
+		
+		if (hexText.length != length) {
 			return null
 		} 
 		
-		try {
-			return java.lang.Long.parseLong(text, 16)
-		} catch (ex: NumberFormatException) {
-			return null
-		}
+		return Pair(id, hexText)
 	}
 	
 	private fun parseCommand(command: String, line: String): String? {
@@ -199,7 +206,7 @@ class SimpleBot {
 				""".trimMargin())
 	}
 	
-	private fun respondAnalyzeXentisId(event: SlackMessagePosted, text: String, id: Long) {
+	private fun respondAnalyzeXentisId(event: SlackMessagePosted, id: Long, text: String) {
 		session.sendMessage(event.channel, "This is a Xentis id: $text = decimal $id")
 		
 		respondAnalyzeXentisClassPart(event, text)
