@@ -19,7 +19,6 @@ class XentisSysCode {
 						germanLong=fields[5],
 						englishShort=fields[6],
 						englishLong=fields[7])
-				println(syscode)
 				idToSysCode[syscode.id] = syscode
 			}
 		}
