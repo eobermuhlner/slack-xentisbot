@@ -24,6 +24,7 @@ class SimpleBot {
 	val translations: MutableSet<Pair<String, String>> = loadPropertiesTranslations()
 	val xentisDbSchema = XentisDbSchema()
 	val xentisKeyMigration = XentisKeyMigration()
+	val xentisSysCode = XentisSysCode()
 	
 	fun start () {
 		val xentisSchemaFileName = properties.getProperty("xentis.schema")
@@ -36,7 +37,13 @@ class SimpleBot {
 			xentisKeyMigration.parse(xentisKeyMigrationFileName)
 			translations.addAll(xentisKeyMigration.getAllTranslations())
 		}
-		
+
+		val xentisSysCodeFileName = properties.getProperty("xentis.syscode")
+		val xentisSysSubsetFileName = properties.getProperty("xentis.syssubset")
+		if (xentisSysCodeFileName != null && xentisSysSubsetFileName != null) {
+			xentisSysCode.parse(xentisSysCodeFileName, xentisSysSubsetFileName)
+		}
+				
 		session.addMessagePostedListener(SlackMessagePostedListener { event, _ ->
 			if (event.sender.id != user.id) {
 				val message = event.messageContent
@@ -78,6 +85,17 @@ class SimpleBot {
 			return
 		}
 
+		val syscodeText = parseCommand("syscode", messageContent)
+		if (syscodeText != null) {
+			val xentisId = parseXentisId(syscodeText)
+			if (xentisId != null) {
+				respondXentisSysCodeId(event, xentisId)
+			} else {
+				session.sendMessage(event.channel, "This is a not a valid Xentis syscode id: $idText. It must be 16 hex digits.")
+			}
+			return
+		}
+
 		val classPartText = parseCommand("classpart", messageContent)
 		if (classPartText != null) {
 			val xentisId = parseXentisId(classPartText, 4)
@@ -110,6 +128,8 @@ class SimpleBot {
 		val xentisId = parseXentisId(messageContent)
 		if (xentisId != null) {
 			respondAnalyzeXentisId(event, messageContent, xentisId)
+			
+			respondXentisSysCodeId(event, xentisId, failMessage=false)
 			return
 		}
 		
@@ -174,6 +194,19 @@ class SimpleBot {
 		session.sendMessage(event.channel, "This is a Xentis id: $text = decimal $id")
 		
 		respondAnalyzeXentisClassPart(event, text)
+	}
+
+	private fun respondXentisSysCodeId(event: SlackMessagePosted, id: Long, failMessage: Boolean = true) {
+		val syscode = xentisSysCode.getSysCode(id)
+		
+		if (syscode == null) {
+			if (failMessage) {
+				session.sendMessage(event.channel, "This is not a valid a Xentis syscode: ${id.toString(16)}")
+			}
+			return
+		}
+		
+		session.sendMessage(event.channel, syscode.toMessage())
 	}
 	
 	private fun respondAnalyzeXentisClassPart(event: SlackMessagePosted, text: String) {
