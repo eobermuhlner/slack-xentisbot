@@ -101,7 +101,7 @@ class SimpleBot {
 			val classPartText = args[1]
 			val xentisId = parseXentisId(classPartText, 4)
 			if (xentisId != null) {
-				respondAnalyzeXentisClassPart(event, classPartText)
+				respondAnalyzeXentisClassPart(event, xentisId.second)
 			} else {
 				session.sendMessage(event.channel, "This is a not a valid Xentis classpart: $classPartText. It must be 4 hex digits.")
 			}
