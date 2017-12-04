@@ -12,6 +12,7 @@ import com.ullink.slack.simpleslackapi.SlackSession
 import com.ullink.slack.simpleslackapi.events.SlackEvent
 import com.ullink.slack.simpleslackapi.events.SlackMessagePosted
 import java.io.BufferedReader
+import java.util.regex.Pattern
 
 class SimpleBot {
 	val properties = loadProperties("simplebot.properties")
@@ -62,21 +63,21 @@ class SimpleBot {
 	fun respondToMessage(event: SlackMessagePosted , messageContent: String) {
 		println(messageContent)
 		
-		val help = parseCommand("help", messageContent)
-		if (help != null || messageContent.trim() == "") {
+		val args = messageContent.split(Pattern.compile("\\s+"))
+		
+		if (args.size == 0 || isCommand(args, "", 0) || isCommand(args, "help", 0)) {
 			respondHelp(event)
 			return
 		}
 
-		val translateText = parseCommand("translate", messageContent)
-		if (translateText != null) {
-			respondSearchTranslations(event, translateText)
+		if (isCommand(args, "translate", 1)) {
+			respondSearchTranslations(event, args[1])
 			return
 		}
 		
-		val idText = parseCommand("id", messageContent)
-		if (idText != null) {
-			val xentisId = parseXentisId(idText)
+		if (isCommand(args, "id", 1)) {
+			val idText = args[1]
+			val xentisId = parseXentisId(args[1])
 			if (xentisId != null) {
 				respondAnalyzeXentisId(event, idText, xentisId)
 			} else {
@@ -85,8 +86,8 @@ class SimpleBot {
 			return
 		}
 
-		val syscodeText = parseCommand("syscode", messageContent)
-		if (syscodeText != null) {
+		if (isCommand(args, "syscode", 1)) {
+			val syscodeText = args[1]
 			val xentisId = parseXentisId(syscodeText)
 			if (xentisId != null) {
 				respondXentisSysCodeId(event, xentisId)
@@ -96,8 +97,8 @@ class SimpleBot {
 			return
 		}
 
-		val classPartText = parseCommand("classpart", messageContent)
-		if (classPartText != null) {
+		if (isCommand(args, "classpart", 1)) {
+			val classPartText = args[1]
 			val xentisId = parseXentisId(classPartText, 4)
 			if (xentisId != null) {
 				respondAnalyzeXentisClassPart(event, classPartText)
@@ -107,20 +108,20 @@ class SimpleBot {
 			return
 		}
 
-		val partialTableName = parseCommand("tables", messageContent)
-		if (partialTableName != null) {
+		if (isCommand(args, "tables", 1)) {
+			val partialTableName = args[1]
 			respondXentisPartialTableName(event, partialTableName)
 			return
 		}
 		
-		val tableName = parseCommand("table", messageContent)
-		if (tableName != null) {
+		if (isCommand(args, "table", 1)) {
+			val tableName = args[1]
 			respondXentisTableName(event, tableName)
 			return
 		}
 		
-		val keyId = parseCommand("key", messageContent)
-		if (keyId != null) {
+		if (isCommand(args, "key", 1)) {
+			val keyId = args[1]
 			respondXentisKey(event, keyId)
 			return
 		}
@@ -139,8 +140,13 @@ class SimpleBot {
 			return
 		}
 		
+		respondXentisSysCodeText(event, messageContent, failMessage=false)
 		respondXentisTableName(event, messageContent, failMessage=false)
 		respondSearchTranslations(event, messageContent)
+	}
+	
+	private fun isCommand(args: List<String>, command: String, argCount: Int): Boolean {
+		return args.size >= (argCount + 1) && args[0] == command
 	}
 	
 	private fun parseXentisId(text: String, length: Int = 16): Long? {
