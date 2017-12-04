@@ -29,12 +29,12 @@ class XentisSysCode {
 		return idToSysCode[id]
 	}
 	
-	fun findSysCode(text: String): List<SysCode> {
+	fun findSysCodes(text: String): List<SysCode> {
 		val result = mutableListOf<SysCode>()
 		
 		for(syscode in idToSysCode.values) {
 			if (syscode != null) {
-				if (syscode.code.equals(text)) {
+				if (syscode.code.equals(text) || syscode.name.equals(text)) {
 					result.add(syscode)
 				}
 			}
@@ -55,10 +55,10 @@ class XentisSysCode {
 		fun toMessage(): String {
 			var message = "Syscode ${id.toString(16)} = decimal $id\n"
 			
-			message += "code $code\n"
-			message += "name $name\n"
-			message += "short translation $germanShort : $englishShort\n"
-			message += "long translation $germanLong : $englishLong\n"
+			message += "    code: $code\n"
+			message += "    name: $name\n"
+			message += "    short translation: $germanShort : $englishShort\n"
+			message += "    long translation: $germanLong : $englishLong\n"
 			
 			return message
 		}

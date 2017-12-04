@@ -91,7 +91,7 @@ class SimpleBot {
 			if (xentisId != null) {
 				respondXentisSysCodeId(event, xentisId)
 			} else {
-				session.sendMessage(event.channel, "This is a not a valid Xentis syscode id: $idText. It must be 16 hex digits.")
+				respondXentisSysCodeText(event, syscodeText)
 			}
 			return
 		}
@@ -172,6 +172,9 @@ class SimpleBot {
 				|$bot classpart 1083
 				|$bot tables zuord
 				|$bot table portfolio
+				|$bot syscode 10510000940000aa
+				|$bot syscode C_InstParam_PseudoVerfall
+				|$bot key 1890
 				|$bot translate interest
 				|
 				|If you talk with me without specifying a command, I will try to answer as best as I can (maybe giving multiple answers).
@@ -209,9 +212,27 @@ class SimpleBot {
 		session.sendMessage(event.channel, syscode.toMessage())
 	}
 	
+	private fun respondXentisSysCodeText(event: SlackMessagePosted, text: String, failMessage: Boolean = true) {
+		val syscodeResults = xentisSysCode.findSysCodes(text)
+		
+		if (syscodeResults.size == 0) {
+			session.sendMessage(event.channel, "No matching Xentis syscodes found.")
+		}
+		
+		val syscodes = plural(syscodeResults.size, "syscode", "syscodes")
+		var message = "_Found ${syscodeResults.size} $syscodes:_\n"
+		
+		for (syscode in syscodeResults) {
+			message += syscode.toMessage()
+			message += "\n"
+		}
+		
+		session.sendMessage(event.channel, message)
+	}
+	
 	private fun respondAnalyzeXentisClassPart(event: SlackMessagePosted, text: String) {
 		val xentisClassPartText = text.substring(0, 4)
-		val xentisClassPart = java.lang.Long.parseLong(xentisClassPartText, 16) and 0xff
+		val xentisClassPart = java.lang.Long.parseLong(xentisClassPartText, 16) and 0xfff
 		val tableName = xentisDbSchema.getTableName(xentisClassPart)
 		if (tableName != null) {
 			session.sendMessage(event.channel, "The classpart $xentisClassPartText indicates a Xentis table $tableName")
