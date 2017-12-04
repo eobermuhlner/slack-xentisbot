@@ -216,7 +216,10 @@ class SimpleBot {
 		val syscodeResults = xentisSysCode.findSysCodes(text)
 		
 		if (syscodeResults.size == 0) {
-			session.sendMessage(event.channel, "No matching Xentis syscodes found.")
+			if (failMessage) {
+				session.sendMessage(event.channel, "No matching Xentis syscodes found.")
+			}
+			return
 		}
 		
 		val syscodes = plural(syscodeResults.size, "syscode", "syscodes")
