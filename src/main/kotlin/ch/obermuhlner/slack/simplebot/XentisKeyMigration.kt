@@ -124,12 +124,21 @@ class XentisKeyMigration {
 		return result
 	}
 	
-	fun getKeyNode(id: Int): KeyNode? {
+	fun getKeyNode(id: Int?): KeyNode? {
+		if (id == null) {
+			return null
+		}
 		return idToKeyNode[id]
 	}
 
 	fun toMessage(keyNode: KeyNode): String {
-		var message = "Key ${keyNode.id} ${italic(keyNode.name)} ${prefix("type", italic(keyNode.type))} ${keyNode.actionKey} ${prefix("references", keyNode.referenced)}\n"
+		val referencedKeyNode = getKeyNode(keyNode.referenced)
+		var message = "Key ${keyNode.id} ${italic(keyNode.name)}"
+		message += prefix(" type", italic(keyNode.type))
+		message += prefix(" action ", keyNode.actionKey)
+		message += prefix(" is a ", referencedKeyNode?.type)
+		message += "\n"
+		
 		if (keyNode.parent != null) {
 			message += "    parent ${keyNode.parent}\n"
 		}
@@ -140,11 +149,23 @@ class XentisKeyMigration {
 		}
 
 		for(mapping in keyNode.mappings.sortedWith(compareBy(KeyMapping::id))) {
+			message += "    keyMapping ${mapping.id}"
 			val mappingKeyNode = getKeyNode(mapping.id)
+			if (mappingKeyNode != null) {
+				message += " "
+				message += italic(mappingKeyNode.name)
+			}
 			val mappingRefKeyNode = getKeyNode(mapping.refId)
-			message += "    keyMapping ${mapping.id} references ${mapping.refId} (${italic(mappingKeyNode?.name)} ${prefix("references", italic(mappingRefKeyNode?.name))} )\n"
+			if (mappingRefKeyNode != null) {
+				message += " references "
+				message += mappingRefKeyNode.id
+				message += " "
+				message += italic(mappingRefKeyNode.name)
+				message += prefix(" is a ", mappingRefKeyNode.type)
+			}
+			message += "\n"
 			for(translation in mapping.translations.sortedWith(compareBy(KeyTranslation::language, KeyTranslation::type))) {
-				message += "        translation ${translation.language} ${translation.type.orEmpty()} : ${translation.text} \n"
+				message += "        translation ${translation.language} ${translation.type.orEmpty()} : _${translation.text}_\n"
 			}
 		}
 
