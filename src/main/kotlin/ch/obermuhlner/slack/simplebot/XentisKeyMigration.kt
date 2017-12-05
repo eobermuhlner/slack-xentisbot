@@ -24,7 +24,13 @@ class XentisKeyMigration {
 					"children" -> {
 						val parent: KeyNode? = keyNodeStack.lastOrNull()
 						val parentId: Int? = parent?.id
-						val keyNode = KeyNode(parseInt(attributes.getValue("id")), attributes.getValue("name"), attributes.getValue("standardComponentType"), parentId)
+						val keyNode = KeyNode(
+								id = parseInt(attributes.getValue("id")),
+								name = attributes.getValue("name"),
+								type = attributes.getValue("standardComponentType"),
+								parent = parentId,
+								actionKey = parseInt(attributes.getValue("actionKeyNode")),
+								referenced = parseInt(attributes.getValue("referencedNode")))
 						idToKeyNode[keyNode.id] = keyNode
 						keyNodeStack.add(keyNode)
 						if (parent != null) {
@@ -49,7 +55,9 @@ class XentisKeyMigration {
 						}
 					}
 					"keyMapping" -> {
-						val keyMapping = KeyMapping(parseInt(attributes.getValue("id")))
+						val keyMapping = KeyMapping(
+								id = parseInt(attributes.getValue("id")),
+								refId = parseInt(attributes.getValue("refId")))
 						val keyNode: KeyNode = keyNodeStack.last()
 						keyNode.mappings.add(keyMapping)
 						currentKeyMapping = keyMapping
@@ -117,40 +125,60 @@ class XentisKeyMigration {
 	fun getKeyNode(id: Int): KeyNode? {
 		return idToKeyNode[id]
 	}
+
+	fun toMessage(keyNode: KeyNode): String {
+		var message = "Key ${keyNode.id} ${italic(keyNode.name)} ${prefix("type", italic(keyNode.type))} ${keyNode.actionKey} ${prefix("references", keyNode.referenced)}\n"
+		if (keyNode.parent != null) {
+			message += "    parent ${keyNode.parent}\n"
+		}
+		message += "    children ${keyNode.children}\n"
+		
+		for(translation in keyNode.translations.sortedWith(compareBy(KeyTranslation::language, KeyTranslation::type))) {
+			message += "    translation ${translation.language} ${translation.type.orEmpty()} : ${translation.text} \n"
+		}
+
+		for(mapping in keyNode.mappings.sortedWith(compareBy(KeyMapping::id))) {
+			val mappingKeyNode = getKeyNode(mapping.id)
+			val mappingRefKeyNode = getKeyNode(mapping.refId)
+			message += "    keyMapping ${mapping.id} references ${mapping.refId} (${italic(mappingKeyNode?.name)} ${prefix("references", italic(mappingRefKeyNode?.name))} )\n"
+			for(translation in mapping.translations.sortedWith(compareBy(KeyTranslation::language, KeyTranslation::type))) {
+				message += "        translation ${translation.language} ${translation.type.orEmpty()} : ${translation.text} \n"
+			}
+		}
+
+		return message
+	}
 	
+	private fun prefix(prefix: String, value : Any?): String {
+		if (value == null || value == "" || value == 0) {
+			return ""
+		} else {
+			return "${prefix} ${value}"
+		}
+	}
+
+	private fun italic(value : Any?): String {
+		if (value == null || value == "" || value == 0) {
+			return ""
+		} else {
+			return "_${value}_"
+		}
+	}
+
 	data class KeyNode(
 			val id: Int,
 			val name: String?,
 			val type: String?,
 			val parent: Int?,
+			val actionKey: Int?,
+			val referenced: Int?,
 			val children: MutableList<Int> = mutableListOf(),
 			val mappings: MutableList<KeyMapping> = mutableListOf(),
-			val translations: MutableList<KeyTranslation> = mutableListOf()) {
-		
-		fun toMessage(): String {
-			var message = "Key $id $name ${type.orEmpty()}\n"
-			if (parent != null) {
-				message += "    parent $parent\n"
-			}
-			message += "    children $children\n"
-			
-			for(translation in translations.sortedWith(compareBy(KeyTranslation::language, KeyTranslation::type))) {
-				message += "    translation ${translation.language} ${translation.type.orEmpty()} : ${translation.text} \n"
-			}
-
-			for(keyMapping in mappings.sortedWith(compareBy(KeyMapping::id))) {
-				message += "    keyMapping ${keyMapping.id}\n"
-				for(translation in keyMapping.translations.sortedWith(compareBy(KeyTranslation::language, KeyTranslation::type))) {
-					message += "        translation ${translation.language} ${translation.type.orEmpty()} : ${translation.text} \n"
-				}
-			}
-								
-			return message
-		}
-	}
+			val translations: MutableList<KeyTranslation> = mutableListOf())
 	
 	data class KeyMapping(
 			val id: Int,
+			val refId: Int,
 			val translations: MutableList<KeyTranslation> = mutableListOf())
 	
 	data class KeyTranslation(

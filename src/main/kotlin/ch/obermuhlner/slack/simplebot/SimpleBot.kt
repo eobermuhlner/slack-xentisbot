@@ -312,7 +312,7 @@ class SimpleBot {
 			return
 		}
 		
-		session.sendMessage(event.channel, keyNode.toMessage())
+		session.sendMessage(event.channel, xentisKeyMigration.toMessage(keyNode))
 	}
 		
 	private fun respondSearchTranslations(event: SlackMessagePosted, text: String) {
