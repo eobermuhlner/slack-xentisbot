@@ -143,6 +143,21 @@ class SimpleBot {
 			respondXentisKey(event, args[1])
 			return
 		}
+
+		if (isCommand(args, "dec", 1)) {
+			respondNumberConversion(event, args[1].removeSuffix("L"), 10)
+			return
+		}
+		
+		if (isCommand(args, "hex", 1)) {
+			respondNumberConversion(event, args[1].removePrefix("0x").removeSuffix("L"), 16)
+			return
+		}
+		
+		if (isCommand(args, "bin", 1)) {
+			respondNumberConversion(event, args[1].removeSuffix("L"), 2)
+			return
+		}
 		
 		val xentisId = parseXentisId(messageContent)
 		if (xentisId != null) {
@@ -332,10 +347,29 @@ class SimpleBot {
 		
 		session.sendMessage(event.channel, xentisKeyMigration.toMessage(keyNode))
 	}
+	
+	private fun respondNumberConversion(event: SlackMessagePosted, text: String, base: Int, failMessage: Boolean = true) {
+		val value = text.toLongOrNull(base)
 		
-	private fun respondSearchTranslations(event: SlackMessagePosted, text: String) {
+		if (value == null) {
+			if (failMessage) {
+				session.sendMessage(event.channel, "Not a valid number for base $base: $text")			
+			}
+			return
+		}
+		
+		session.sendMessage(event.channel, """
+				|Dec: ${value}
+				|Hex: ${value.toString(16)}
+				|Bin: ${value.toString(2)}
+				""".trimMargin())
+	}
+		
+	private fun respondSearchTranslations(event: SlackMessagePosted, text: String, failMessage: Boolean = true) {
 		if (text == "") {
-			session.sendMessage(event.channel, "Nothing to translate.")
+			if (failMessage) {
+				session.sendMessage(event.channel, "Nothing to translate.")
+			}
 			return
 		}
 		
@@ -359,18 +393,18 @@ class SimpleBot {
 		var message: String
 		if (perfectResults.size > 0) {
 			val translations = plural(perfectResults.size, "translation", "translations")
-			message = "_Found ${perfectResults.size} $translations for exactly this term:_\n"
+			message = "Found ${perfectResults.size} $translations for exactly this term:\n"
 			for (result in limit(sortedList(perfectResults))) {
-				message += result + "\n"
+				message += "_${result}_\n"
 			}
 		} else if (partialResults.size > 0) {
 			val translations = plural(perfectResults.size, "translation", "translations")
-			message = "_Found ${partialResults.size} $translations that partially matched this term:_\n"
+			message = "Found ${partialResults.size} $translations that partially matched this term:\n"
 			for (result in limit(sortedList(partialResults))) {
-				message += result + "\n"
+				message += "_${result}_\n"
 			}
 		} else {
-			message = "_No translations found._"
+			message = "No translations found."
 		}
 		
 		session.sendMessage(event.channel, message)
