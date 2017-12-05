@@ -130,20 +130,17 @@ class SimpleBot {
 		}
 
 		if (isCommand(args, "tables", 1)) {
-			val partialTableName = args[1]
-			respondXentisPartialTableName(event, partialTableName)
+			respondXentisPartialTableName(event, args[1])
 			return
 		}
 		
 		if (isCommand(args, "table", 1)) {
-			val tableName = args[1]
-			respondXentisTableName(event, tableName)
+			respondXentisTableName(event, args[1])
 			return
 		}
 		
 		if (isCommand(args, "key", 1)) {
-			val keyId = args[1]
-			respondXentisKey(event, keyId)
+			respondXentisKey(event, args[1])
 			return
 		}
 		
