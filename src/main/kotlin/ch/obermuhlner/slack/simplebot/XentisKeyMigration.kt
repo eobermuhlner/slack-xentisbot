@@ -8,6 +8,8 @@ import java.io.File
 class XentisKeyMigration {
 	private val idToKeyNode: MutableMap<Int, KeyNode> = mutableMapOf()
 	
+	val translations get() = getAllTranslations()
+	
 	fun parse(keyMigrationFile: String) {
 		val factory = SAXParserFactory.newInstance()
 		val parser = factory.newSAXParser()
@@ -87,7 +89,7 @@ class XentisKeyMigration {
 		return java.lang.Integer.parseInt(text)
 	}
 	
-	fun getAllTranslations(): Set<Pair<String, String>> {
+	private fun getAllTranslations(): Set<Pair<String, String>> {
 		val result: MutableSet<Pair<String, String>> = mutableSetOf()
 		
 		for (keyNode in idToKeyNode.values) {

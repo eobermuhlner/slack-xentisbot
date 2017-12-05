@@ -22,7 +22,8 @@ class SimpleBot {
 	
 	val observedChannelIds = HashSet<String>()
 
-	val translations: MutableSet<Pair<String, String>> = loadPropertiesTranslations()
+	val translations = mutableSetOf<Pair<String, String>>() 
+	val xentisPropertiesTranslations = XentisPropertiesTranslations()
 	val xentisDbSchema = XentisDbSchema()
 	val xentisKeyMigration = XentisKeyMigration()
 	val xentisSysCode = XentisSysCode()
@@ -36,7 +37,7 @@ class SimpleBot {
 		val xentisKeyMigrationFileName = properties.getProperty("xentis.keymigration")
 		if (xentisKeyMigrationFileName != null) {
 			xentisKeyMigration.parse(xentisKeyMigrationFileName)
-			translations.addAll(xentisKeyMigration.getAllTranslations())
+			translations.addAll(xentisKeyMigration.translations)
 		}
 
 		val xentisSysCodeFileName = properties.getProperty("xentis.syscode")
@@ -44,7 +45,10 @@ class SimpleBot {
 		if (xentisSysCodeFileName != null && xentisSysSubsetFileName != null) {
 			xentisSysCode.parse(xentisSysCodeFileName, xentisSysSubsetFileName)
 		}
-				
+		
+		loadPropertiesTranslations()
+		translations.addAll(xentisPropertiesTranslations.translations)
+		
 		session.addMessagePostedListener(SlackMessagePostedListener { event, _ ->
 			if (event.sender.id != user.id) {
 				val message = event.messageContent
@@ -58,6 +62,23 @@ class SimpleBot {
 		})
 		
 		println("Ready")
+	}
+	
+	fun loadPropertiesTranslations() {
+		var translationIndex = 0
+		
+		var file1: String?
+		var file2: String?
+		
+		do {
+			translationIndex++
+			file1 = properties.getProperty("translation.${translationIndex}.source.properties")
+			file2 = properties.getProperty("translation.${translationIndex}.target.properties")
+	
+			if (file1 != null && file2 != null) {
+				xentisPropertiesTranslations.parse(file1, file2)
+			}
+		} while (file1 != null && file2 != null)
 	}
 	
 	fun respondToMessage(event: SlackMessagePosted , messageContent: String) {
@@ -380,38 +401,6 @@ class SimpleBot {
 		return result 
 	} 
 
-	private fun loadPropertiesTranslations(): MutableSet<Pair<String, String>> {
-		val result: MutableSet<Pair<String, String>> = mutableSetOf()
-		
-		var translationIndex = 0
-		
-		var file1: String?
-		var file2: String?
-		
-		do {
-			translationIndex++
-			file1 = properties.getProperty("translation.${translationIndex}.source.properties")
-			file2 = properties.getProperty("translation.${translationIndex}.target.properties")
-	
-			if (file1 != null && file2 != null) {
-				val translations1 = loadProperties(file1)
-				val translations2 = loadProperties(file2)
-				
-				for(key in translations1.keys) {
-					if(key is String) {
-						val translation1 = translations1.getProperty(key)
-						val translation2 = translations2.getProperty(key)
-						if (translation1 != null && translation2 != null) {
-							result.add(Pair(translation1, translation2))
-						} 
-					}
-				}
-			}
-		} while (file1 != null && file2 != null)
-			
-		return result
-	}
-	
 	private fun connected(s: SlackSession): SlackSession {
 		s.connect()
 		return s
