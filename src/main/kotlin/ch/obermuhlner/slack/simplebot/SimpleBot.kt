@@ -13,12 +13,16 @@ import com.ullink.slack.simpleslackapi.events.SlackEvent
 import com.ullink.slack.simpleslackapi.events.SlackMessagePosted
 import java.io.BufferedReader
 import java.util.regex.Pattern
+import java.io.PrintWriter
+import java.io.StringWriter
+import com.ullink.slack.simpleslackapi.SlackAttachment
 
 class SimpleBot {
 	val properties = loadProperties("simplebot.properties")
 	val apiKey = properties.getProperty("api.key");
 	val session = connected(SlackSessionFactory.createWebSocketSlackSession(apiKey))
 	val user = session.user()
+	var adminUser: SlackUser? = null
 	
 	val observedChannelIds = HashSet<String>()
 
@@ -29,6 +33,8 @@ class SimpleBot {
 	val xentisSysCode = XentisSysCode()
 	
 	fun start () {
+		adminUser = findUser(properties.getProperty("admin.user"))
+		
 		val xentisSchemaFileName = properties.getProperty("xentis.schema")
 		if (xentisSchemaFileName != null) {
 			xentisDbSchema.parse(xentisSchemaFileName)
@@ -50,6 +56,27 @@ class SimpleBot {
 		translations.addAll(xentisPropertiesTranslations.translations)
 		
 		session.addMessagePostedListener(SlackMessagePostedListener { event, _ ->
+			handleMessagePosted(event)
+		})
+		
+		println("Ready")
+	}
+
+	private fun findUser(user: String?): SlackUser? {
+		if (user == null) {
+			return null
+		}
+		
+		val userById = session.findUserById(user)
+		if (userById != null) {
+			return userById
+		}
+		
+		return session.findUserByUserName(user)
+	}
+	
+	private fun handleMessagePosted(event: SlackMessagePosted) {
+		try {
 			if (event.sender.id != user.id) {
 				val message = event.messageContent
 				val directMessage = parseCommand(user.tag(), message)
@@ -59,11 +86,28 @@ class SimpleBot {
 					respondToMessage(event, event.messageContent) 
 				}
 			}
-		})
-		
-		println("Ready")
+		} catch (ex: Exception) {
+			handleException("""
+					|*Failed to handle message:*
+					|from: ${event.sender.realName}
+					|channel: ${event.channel.name}
+					|content: ${event.messageContent}
+					""".trimMargin(), ex)
+		}
 	}
 	
+	private fun handleException(message: String, ex: Exception) {
+		ex.printStackTrace()
+		
+		if (adminUser != null) {
+			val stringWriter = StringWriter()
+			ex.printStackTrace(PrintWriter(stringWriter))
+			
+			session.sendMessageToUser(adminUser, message, null)
+			session.sendFileToUser(adminUser, stringWriter.toString().toByteArray(), "Stacktrace.txt")
+		}
+	}
+		
 	fun loadPropertiesTranslations() {
 		var translationIndex = 0
 		
@@ -155,10 +199,12 @@ class SimpleBot {
 		}
 		
 		if (isCommand(args, "bin", 1)) {
-			respondNumberConversion(event, args[1].removeSuffix("L"), 2)
+			respondNumberConversion(event, args[1].removePrefix("0b").removeSuffix("L"), 2)
 			return
 		}
-		
+
+		// generic parsing
+				
 		val xentisId = parseXentisId(messageContent)
 		if (xentisId != null) {
 			respondAnalyzeXentisId(event, xentisId.first, xentisId.second)
@@ -170,7 +216,16 @@ class SimpleBot {
 		val xentisClassPart = parseXentisId(messageContent, 4)
 		if (xentisClassPart != null) {
 			respondAnalyzeXentisClassPart(event, messageContent)
-			return
+		}
+		
+		if (args[0].startsWith("0x")) {
+			respondNumberConversion(event, args[0].removePrefix("0x").removeSuffix("L"), 16)
+		} else if (args[0].startsWith("0b")) {
+			respondNumberConversion(event, args[0].removePrefix("0b").removeSuffix("L"), 2)
+		} else {
+			respondNumberConversion(event, args[0].removeSuffix("L"), 10, failMessage=false, introMessage=true)
+			respondNumberConversion(event, args[0].removePrefix("0x").removeSuffix("L"), 16, failMessage=false, introMessage=true)
+			respondNumberConversion(event, args[0].removePrefix("0b").removeSuffix("L"), 2, failMessage=false, introMessage=true)
 		}
 		
 		respondXentisSysCodeText(event, messageContent, failMessage=false)
@@ -350,7 +405,7 @@ class SimpleBot {
 		session.sendMessage(event.channel, xentisKeyMigration.toMessage(keyNode))
 	}
 	
-	private fun respondNumberConversion(event: SlackMessagePosted, text: String, base: Int, failMessage: Boolean = true) {
+	private fun respondNumberConversion(event: SlackMessagePosted, text: String, base: Int, failMessage: Boolean = true, introMessage: Boolean = true) {
 		val value = text.toLongOrNull(base)
 		
 		if (value == null) {
@@ -360,6 +415,10 @@ class SimpleBot {
 			return
 		}
 		
+		if (introMessage) {
+			session.sendMessage(event.channel, "Interpreting as number with base $base:")
+		}
+ 
 		session.sendMessage(event.channel, """
 				|Dec: ${value}
 				|Hex: ${value.toString(16)}
