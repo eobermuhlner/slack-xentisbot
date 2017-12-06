@@ -221,6 +221,8 @@ class SimpleBot {
 				|$bot syscode 10510000940000aa
 				|$bot syscode C_InstParam_PseudoVerfall
 				|$bot key 1890
+				|$bot hex c0defeed
+				|$bot dec 1234567890
 				|$bot translate interest
 				|
 				|If you talk with me without specifying a command, I will try to answer as best as I can (maybe giving multiple answers).
