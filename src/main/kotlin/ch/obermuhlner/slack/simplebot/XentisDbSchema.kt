@@ -11,6 +11,9 @@ class XentisDbSchema {
 	private val tableIdToTable = mutableMapOf<Long, DbTable?>()
 		
 	fun parse(schemaFile: String) {
+		tableNameToTable.clear()
+		tableIdToTable.clear()
+		
 		val factory = SAXParserFactory.newInstance()
 		val parser = factory.newSAXParser()
 		

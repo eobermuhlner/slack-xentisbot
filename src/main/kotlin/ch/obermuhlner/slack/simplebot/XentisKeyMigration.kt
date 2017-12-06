@@ -11,6 +11,8 @@ class XentisKeyMigration {
 	val translations get() = getAllTranslations()
 	
 	fun parse(keyMigrationFile: String) {
+		idToKeyNode.clear()
+		
 		val factory = SAXParserFactory.newInstance()
 		val parser = factory.newSAXParser()
 		

@@ -6,6 +6,8 @@ class XentisPropertiesTranslations {
 	val translations get() = _translations
 	
 	fun parse(sourceFile: String, targetFile: String) {
+		_translations.clear()
+		
 		val translations1 = loadProperties(sourceFile)
 		val translations2 = loadProperties(targetFile)
 		

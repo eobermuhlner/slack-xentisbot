@@ -18,10 +18,8 @@ import java.io.StringWriter
 import com.ullink.slack.simpleslackapi.SlackAttachment
 
 class SimpleBot {
-	val properties = loadProperties("simplebot.properties")
-	val apiKey = properties.getProperty("api.key");
-	val session = connected(SlackSessionFactory.createWebSocketSlackSession(apiKey))
-	val user = session.user()
+	lateinit var session: SlackSession
+	lateinit var user: SlackUser
 	var adminUser: SlackUser? = null
 	
 	val observedChannelIds = HashSet<String>()
@@ -33,6 +31,22 @@ class SimpleBot {
 	val xentisSysCode = XentisSysCode()
 	
 	fun start () {
+		loadData()
+		
+		session.addMessagePostedListener(SlackMessagePostedListener { event, _ ->
+			handleMessagePosted(event)
+		})
+		
+		println("Ready")
+	}
+	
+	private fun loadData() {
+		val properties = loadProperties("simplebot.properties")
+		
+		val apiKey = properties.getProperty("api.key")
+		session = connected(SlackSessionFactory.createWebSocketSlackSession(apiKey))
+		
+		user = session.user()
 		adminUser = findUser(properties.getProperty("admin.user"))
 		
 		val xentisSchemaFileName = properties.getProperty("xentis.schema")
@@ -52,14 +66,8 @@ class SimpleBot {
 			xentisSysCode.parse(xentisSysCodeFileName, xentisSysSubsetFileName)
 		}
 		
-		loadPropertiesTranslations()
+		loadPropertiesTranslations(properties)
 		translations.addAll(xentisPropertiesTranslations.translations)
-		
-		session.addMessagePostedListener(SlackMessagePostedListener { event, _ ->
-			handleMessagePosted(event)
-		})
-		
-		println("Ready")
 	}
 
 	private fun findUser(user: String?): SlackUser? {
@@ -108,7 +116,7 @@ class SimpleBot {
 		}
 	}
 		
-	fun loadPropertiesTranslations() {
+	fun loadPropertiesTranslations(properties: Properties) {
 		var translationIndex = 0
 		
 		var file1: String?
@@ -135,6 +143,17 @@ class SimpleBot {
 			return
 		}
 
+		if (isCommand(args, "refresh", 0)) {
+			loadData()
+			respondStatus(event)
+			return
+		}
+		
+		if (isCommand(args, "status", 0)) {
+			respondStatus(event)
+			return
+		}
+		
 		if (isCommand(args, "translate", 1)) {
 			respondSearchTranslations(event, args[1])
 			return
@@ -212,7 +231,7 @@ class SimpleBot {
 				
 		val xentisId = parseXentisId(messageContent)
 		if (xentisId != null) {
-			respondAnalyzeXentisId(event, xentisId.first, xentisId.second)
+			respondAnalyzeXentisId(event, xentisId.first, xentisId.second, failMessage=false)
 			
 			respondXentisSysCodeId(event, xentisId.first, failMessage=false)
 			return
@@ -220,7 +239,7 @@ class SimpleBot {
 		
 		val xentisClassPart = parseXentisId(messageContent, 4)
 		if (xentisClassPart != null) {
-			respondAnalyzeXentisClassPart(event, messageContent)
+			respondAnalyzeXentisClassPart(event, messageContent, failMessage=false)
 		}
 		
 		if (args[0].startsWith("0x")) {
@@ -301,13 +320,23 @@ class SimpleBot {
 				""".trimMargin())
 	}
 	
-	private fun respondAnalyzeXentisId(event: SlackMessagePosted, id: Long, text: String) {
+	private fun respondStatus(event: SlackMessagePosted) {
+			session.sendMessage(event.channel, """
+					|${xentisDbSchema.getTableNames("").size} database tables
+					|${xentisSysCode.findSysCodes("").size} syscodes
+					|${xentisKeyMigration.translations.size} keymigration translations
+					|${xentisPropertiesTranslations.translations.size} properties translations
+					|${translations.size} total translations
+					""".trimMargin())
+	}
+	
+	private fun respondAnalyzeXentisId(event: SlackMessagePosted, id: Long, text: String, failMessage: Boolean=true) {
 		session.sendMessage(event.channel, "This is a Xentis id: $text = decimal $id")
 		
-		respondAnalyzeXentisClassPart(event, text)
+		respondAnalyzeXentisClassPart(event, text, failMessage=failMessage)
 	}
 
-	private fun respondXentisSysCodeId(event: SlackMessagePosted, id: Long, failMessage: Boolean = true) {
+	private fun respondXentisSysCodeId(event: SlackMessagePosted, id: Long, failMessage: Boolean=true) {
 		val syscode = xentisSysCode.getSysCode(id)
 		
 		if (syscode == null) {
@@ -320,7 +349,7 @@ class SimpleBot {
 		session.sendMessage(event.channel, xentisSysCode.toMessage(syscode))
 	}
 
-	private fun respondXentisPartialSysCodeText(event: SlackMessagePosted, text: String, failMessage: Boolean = true) {
+	private fun respondXentisPartialSysCodeText(event: SlackMessagePosted, text: String, failMessage: Boolean=true) {
 		val syscodeResults = xentisSysCode.findSysCodes(text)
 		
 		if (syscodeResults.size == 0) {
@@ -340,7 +369,7 @@ class SimpleBot {
 		session.sendMessage(event.channel, message)
 	}
 		
-	private fun respondXentisSysCodeText(event: SlackMessagePosted, text: String, failMessage: Boolean = true) {
+	private fun respondXentisSysCodeText(event: SlackMessagePosted, text: String, failMessage: Boolean=true) {
 		val syscodeResults = xentisSysCode.findSysCodes(text)
 		
 		if (syscodeResults.size == 0) {
@@ -361,18 +390,21 @@ class SimpleBot {
 		session.sendMessage(event.channel, message)
 	}
 	
-	private fun respondAnalyzeXentisClassPart(event: SlackMessagePosted, text: String) {
+	private fun respondAnalyzeXentisClassPart(event: SlackMessagePosted, text: String, failMessage: Boolean=true) {
 		val xentisClassPartText = text.substring(0, 4)
 		val xentisClassPart = java.lang.Long.parseLong(xentisClassPartText, 16) and 0xfff
 		val tableName = xentisDbSchema.getTableName(xentisClassPart)
+		
 		if (tableName != null) {
 			session.sendMessage(event.channel, "The classpart $xentisClassPartText indicates a Xentis table $tableName")
 		} else {
-			session.sendMessage(event.channel, "This is not a Xentis classpart: $xentisClassPartText.")
+			if (failMessage) {
+				session.sendMessage(event.channel, "This is not a Xentis classpart: $xentisClassPartText.")
+			}
 		}
 	}
 	
-	private fun respondXentisTableName(event: SlackMessagePosted, text: String, failMessage: Boolean = true) {
+	private fun respondXentisTableName(event: SlackMessagePosted, text: String, failMessage: Boolean=true) {
 		val tableName = text.toUpperCase()
 		
 		val table = xentisDbSchema.getTable(tableName)
@@ -391,7 +423,7 @@ class SimpleBot {
 		}
 	}
 	
-	private fun respondXentisPartialTableName(event: SlackMessagePosted, text: String, failMessage: Boolean = true) {
+	private fun respondXentisPartialTableName(event: SlackMessagePosted, text: String, failMessage: Boolean=true) {
 		val tableNames = xentisDbSchema.getTableNames(text).sorted()
 		
 		if (tableNames.isEmpty()) {
@@ -410,7 +442,7 @@ class SimpleBot {
 		session.sendMessage(event.channel, message)
 	}
 
-	private fun respondXentisKey(event: SlackMessagePosted, text: String, failMessage: Boolean = true) {
+	private fun respondXentisKey(event: SlackMessagePosted, text: String, failMessage: Boolean=true) {
 		val id = text.toIntOrNull()
 		if (id == null) {
 			if (failMessage) {
@@ -430,7 +462,7 @@ class SimpleBot {
 		session.sendMessage(event.channel, xentisKeyMigration.toMessage(keyNode))
 	}
 	
-	private fun respondNumberConversion(event: SlackMessagePosted, text: String, base: Int, failMessage: Boolean = true, introMessage: Boolean = true) {
+	private fun respondNumberConversion(event: SlackMessagePosted, text: String, base: Int, failMessage: Boolean=true, introMessage: Boolean=true) {
 		val value = text.toLongOrNull(base)
 		
 		if (value == null) {
@@ -451,7 +483,7 @@ class SimpleBot {
 				""".trimMargin())
 	}
 		
-	private fun respondSearchTranslations(event: SlackMessagePosted, text: String, failMessage: Boolean = true) {
+	private fun respondSearchTranslations(event: SlackMessagePosted, text: String, failMessage: Boolean=true) {
 		if (text == "") {
 			if (failMessage) {
 				session.sendMessage(event.channel, "Nothing to translate.")

@@ -8,6 +8,8 @@ class XentisSysCode {
 	val idToSysCode = mutableMapOf<Long, SysCode?>()
 	
 	fun parse(sysCodeFile: String, sysSubsetFile: String) {
+		idToSysCode.clear()
+		
 		BufferedReader(FileReader(sysCodeFile)).use {
 			var lastId = 0L
 			var groupId = 0L
