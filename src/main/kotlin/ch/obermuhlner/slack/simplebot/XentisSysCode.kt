@@ -9,19 +9,38 @@ class XentisSysCode {
 	
 	fun parse(sysCodeFile: String, sysSubsetFile: String) {
 		BufferedReader(FileReader(sysCodeFile)).use {
+			var lastId = 0L
+			var groupId = 0L
 			for(line in it.readLines()) {
 				val fields = line.split(";")
+				val id = fields[0].toLong() + 0x1051_0000_0000_0000L
+				if (isGroupId(id, lastId)) {
+					groupId = id
+				}
+				
 				val syscode = SysCode(
-						id=fields[0].toLong() + 0x1051_0000_0000_0000L,
+						id=id,
+						groupId=groupId,
 						code=fields[2],
 						name=fields[3],
 						germanShort=fields[4],
-						germanLong=fields[5],
+						germanMedium=fields[5],
 						englishShort=fields[6],
-						englishLong=fields[7])
-				idToSysCode[syscode.id] = syscode
+						englishMedium=fields[7])
+				idToSysCode[id] = syscode
+				
+				val groupSyscode = idToSysCode[groupId]
+				if (groupSyscode != null) {
+					groupSyscode.children.add(id)
+				} 
+				lastId = id
 			}
 		}
+	}
+	
+	fun isGroupId(id: Long, lastId: Long): Boolean {
+		val delta = id - lastId
+		return delta < 0 || delta > 1000
 	}
 	
 	fun getSysCode(id: Long): SysCode? {
@@ -41,25 +60,50 @@ class XentisSysCode {
 		
 		return result
 	}
+
+	fun toMessage(syscode: SysCode): String {
+		val groupSyscode = getSysCode(syscode.groupId)
+
+		var message = "Syscode ${syscode.id.toString(16)} = decimal ${syscode.id}\n"
+		message += "    code: `${syscode.code}`\n"
+		message += "    name: `${syscode.name}`\n"
+		message += "    short translation: _${syscode.germanShort}_ : _${syscode.englishShort}_\n"
+		message += "    medium translation: _${syscode.germanMedium}_ : _${syscode.englishMedium}_\n"
+		
+		message += "    group: ${syscode.groupId.toString(16)}"
+		if (groupSyscode != null) {
+			message += " `${groupSyscode.name}`"
+		}
+		message += "\n"
+		
+		if (syscode.children.size > 0) {
+			val maxChildren = 20
+			val childrenText = plural(syscode.children.size, "child", "children")
+			message += "    ${syscode.children.size} $childrenText found\n"
+			for(child in syscode.children.slice(0..Math.min(maxChildren, syscode.children.size-1))) {
+				val childSyscode = getSysCode(child)
+				message += "        ${child.toString(16)}"
+				if (childSyscode != null) {
+					message += " `${childSyscode.name}`"
+				}
+				message += "\n"
+			}
+			if (syscode.children.size > maxChildren) {
+				message += "        ...\n"
+			}
+		}
+		
+		return message
+	}
 	
 	data class SysCode(
 			val id: Long,
+			val groupId: Long,
 			val code: String,
 			val name: String,
 			val germanShort: String,
-			val germanLong: String,
+			val germanMedium: String,
 			val englishShort: String,
-			val englishLong: String) {
-		
-		fun toMessage(): String {
-			var message = "Syscode ${id.toString(16)} = decimal $id\n"
-			
-			message += "    code: $code\n"
-			message += "    name: $name\n"
-			message += "    short translation: $germanShort : $englishShort\n"
-			message += "    long translation: $germanLong : $englishLong\n"
-			
-			return message
-		}
-	}
+			val englishMedium: String,
+			val children: MutableList<Long> = mutableListOf())
 }

@@ -312,7 +312,7 @@ class SimpleBot {
 			return
 		}
 		
-		session.sendMessage(event.channel, syscode.toMessage())
+		session.sendMessage(event.channel, xentisSysCode.toMessage(syscode))
 	}
 	
 	private fun respondXentisSysCodeText(event: SlackMessagePosted, text: String, failMessage: Boolean = true) {
@@ -329,7 +329,7 @@ class SimpleBot {
 		var message = "_Found ${syscodeResults.size} $syscodes:_\n"
 		
 		for (syscode in syscodeResults) {
-			message += syscode.toMessage()
+			message += xentisSysCode.toMessage(syscode)
 			message += "\n"
 		}
 		
