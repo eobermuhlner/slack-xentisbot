@@ -52,7 +52,7 @@ class XentisSysCode {
 		
 		for(syscode in idToSysCode.values) {
 			if (syscode != null) {
-				if (syscode.code.equals(text) || syscode.name.equals(text)) {
+				if (syscode.code.equals(text) || syscode.name.contains(text)) {
 					result.add(syscode)
 				}
 			}

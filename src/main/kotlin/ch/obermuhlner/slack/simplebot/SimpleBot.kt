@@ -151,6 +151,11 @@ class SimpleBot {
 			return
 		}
 
+		if (isCommand(args, "syscodes", 1)) {
+			respondXentisPartialSysCodeText(event, args[1])
+			return
+		}
+		
 		if (isCommand(args, "syscode", 1)) {
 			val syscodeText = args[1]
 			val xentisId = parseXentisId(syscodeText)
@@ -314,7 +319,27 @@ class SimpleBot {
 		
 		session.sendMessage(event.channel, xentisSysCode.toMessage(syscode))
 	}
-	
+
+	private fun respondXentisPartialSysCodeText(event: SlackMessagePosted, text: String, failMessage: Boolean = true) {
+		val syscodeResults = xentisSysCode.findSysCodes(text)
+		
+		if (syscodeResults.size == 0) {
+			if (failMessage) {
+				session.sendMessage(event.channel, "No matching Xentis syscodes found.")
+			}
+			return
+		}
+		
+		val syscodes = plural(syscodeResults.size, "syscode", "syscodes")
+		var message = "Found ${syscodeResults.size} $syscodes:\n"
+		
+		for (syscode in syscodeResults) {
+			message += "${syscode.id.toString(16)} `${syscode.name}`\n"
+		}
+		
+		session.sendMessage(event.channel, message)
+	}
+		
 	private fun respondXentisSysCodeText(event: SlackMessagePosted, text: String, failMessage: Boolean = true) {
 		val syscodeResults = xentisSysCode.findSysCodes(text)
 		
@@ -326,7 +351,7 @@ class SimpleBot {
 		}
 		
 		val syscodes = plural(syscodeResults.size, "syscode", "syscodes")
-		var message = "_Found ${syscodeResults.size} $syscodes:_\n"
+		var message = "Found ${syscodeResults.size} $syscodes:\n"
 		
 		for (syscode in syscodeResults) {
 			message += xentisSysCode.toMessage(syscode)
