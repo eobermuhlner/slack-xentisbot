@@ -91,8 +91,8 @@ class XentisKeyMigration {
 		return java.lang.Integer.parseInt(text)
 	}
 	
-	private fun getAllTranslations(): Set<Pair<String, String>> {
-		val result: MutableSet<Pair<String, String>> = mutableSetOf()
+	private fun getAllTranslations(): Set<XentisTranslation> {
+		val result: MutableSet<XentisTranslation> = mutableSetOf()
 		
 		for (keyNode in idToKeyNode.values) {
 			result.addAll(toEnglishGermanTranslations(keyNode.translations))
@@ -105,8 +105,8 @@ class XentisKeyMigration {
 		return result
 	}
 	
-	private fun toEnglishGermanTranslations(translations: Collection<KeyTranslation>): Set<Pair<String, String>> {
-		val result: MutableSet<Pair<String, String>> = mutableSetOf()
+	private fun toEnglishGermanTranslations(translations: Collection<KeyTranslation>): Set<XentisTranslation> {
+		val result: MutableSet<XentisTranslation> = mutableSetOf()
 
 		val translationMap: MutableMap<Pair<String, String?>, String> = mutableMapOf()
 		val translationTypes: MutableSet<String?> = mutableSetOf()
@@ -119,7 +119,7 @@ class XentisKeyMigration {
 			val english = translationMap[Pair("EN", translationType)] 
 			val german = translationMap[Pair("DE", translationType)]
 			if (english != null && german != null) {
-				result.add(Pair(english, german))
+				result.add(XentisTranslation(english, german))
 			} 
 		}
 		

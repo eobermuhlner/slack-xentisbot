@@ -89,14 +89,14 @@ class XentisSysCode {
 		return result
 	}
 	
-	private fun getAllTranslations(): Set<Pair<String, String>> {
-		val result: MutableSet<Pair<String, String>> = mutableSetOf()
+	private fun getAllTranslations(): Set<XentisTranslation> {
+		val result: MutableSet<XentisTranslation> = mutableSetOf()
 		
 		for(syscode in idToSysCode.values) {
 			if (syscode != null) {
 				//result.add(Pair(syscode.englishShort, syscode.germanShort))
 				if (!isAllUppercase(syscode.englishMedium) && !isAllUppercase(syscode.germanMedium)) {
-					result.add(Pair(syscode.englishMedium, syscode.germanMedium))
+					result.add(XentisTranslation(syscode.englishMedium, syscode.germanMedium))
 				}
 			}
 		}

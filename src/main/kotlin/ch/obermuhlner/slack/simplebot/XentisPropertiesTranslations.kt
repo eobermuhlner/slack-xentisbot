@@ -1,7 +1,7 @@
 package ch.obermuhlner.slack.simplebot
 
 class XentisPropertiesTranslations {
-	private val _translations = mutableSetOf<Pair<String, String>>()
+	private val _translations = mutableSetOf<XentisTranslation>()
 	
 	val translations get() = _translations
 	
@@ -16,7 +16,7 @@ class XentisPropertiesTranslations {
 				val translation1 = translations1.getProperty(key)
 				val translation2 = translations2.getProperty(key)
 				if (translation1 != null && translation2 != null) {
-					_translations.add(Pair(translation1, translation2))
+					_translations.add(XentisTranslation(translation1, translation2))
 				} 
 			}
 		}

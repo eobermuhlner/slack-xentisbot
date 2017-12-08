@@ -24,7 +24,7 @@ class SimpleBot {
 	
 	val observedChannelIds = HashSet<String>()
 
-	val translations = mutableSetOf<Pair<String, String>>() 
+	val translations = mutableSetOf<XentisTranslation>() 
 	val xentisPropertiesTranslations = XentisPropertiesTranslations()
 	val xentisDbSchema = XentisDbSchema()
 	val xentisKeyMigration = XentisKeyMigration()
@@ -493,19 +493,19 @@ class SimpleBot {
 			return
 		}
 		
-		val perfectResults = HashSet<Pair<String, String>>()
-		val partialResults = HashSet<Pair<String, String>>()
+		val perfectResults = mutableSetOf<XentisTranslation>()
+		val partialResults = mutableSetOf<XentisTranslation>()
 		for(translation in translations) {
-			if (translation.first.equals(text, ignoreCase=true)) {
+			if (translation.english.equals(text, ignoreCase=true)) {
 				perfectResults.add(translation)
 			}
-			if (translation.second.equals(text, ignoreCase=true)) {
+			if (translation.german.equals(text, ignoreCase=true)) {
 				perfectResults.add(translation)
 			}
-			if (translation.first.contains(text, ignoreCase=true)) {
+			if (translation.english.contains(text, ignoreCase=true)) {
 				partialResults.add(translation)
 			}
-			if (translation.second.contains(text, ignoreCase=true)) {
+			if (translation.german.contains(text, ignoreCase=true)) {
 				partialResults.add(translation)
 			}
 		}
@@ -515,7 +515,7 @@ class SimpleBot {
 			val translations = plural(perfectResults.size, "translation", "translations")
 			message = "Found ${perfectResults.size} $translations for exactly this term:\n"
 			limitedForLoop(10, 0, sortedTranslations(perfectResults), { result ->
-				message += "_${result.first}_ : _${result.second}_ \n"
+				message += "_${result.english}_ : _${result.german}_ \n"
 			}, { _ ->
 				message += "...)\n"
 			})
@@ -523,7 +523,7 @@ class SimpleBot {
 			val translations = plural(partialResults.size, "translation", "translations")
 			message = "Found ${partialResults.size} $translations that partially matched this term:\n"
 			limitedForLoop(10, 0, sortedTranslations(partialResults), { result ->
-				message += "_${result.first}_ : _${result.second}_ \n"
+				message += "_${result.english}_ : _${result.german}_ \n"
 			}, { _ ->
 				message += "...\n"
 			})
@@ -534,10 +534,10 @@ class SimpleBot {
 		session.sendMessage(event.channel, message)
 	}
 	
-	private fun sortedTranslations(collection: Collection<Pair<String, String>>) : List<Pair<String, String>> {
-		val list: MutableList<Pair<String, String>> = mutableListOf()
+	private fun sortedTranslations(collection: Collection<XentisTranslation>) : List<XentisTranslation> {
+		val list: MutableList<XentisTranslation> = mutableListOf()
 		list.addAll(collection)
-		return list.sortedWith(compareBy({ it.first.length }, { it.second.length }, { it.first }, { it.second }))
+		return list.sortedWith(compareBy({ it.english.length }, { it.german.length }, { it.english }, { it.german }))
 	}
 	
 	private fun connected(s: SlackSession): SlackSession {
@@ -591,6 +591,10 @@ private class AuthTestResponse {
 	var teamId: String = ""
 	var team: String = ""
 }
+
+data class XentisTranslation(
+		val english: String,
+		val german: String)
 
 fun main(args: Array<String>) {
 	val bot = SimpleBot()
