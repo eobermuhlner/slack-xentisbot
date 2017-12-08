@@ -95,17 +95,17 @@ class XentisKeyMigration {
 		val result: MutableSet<Pair<String, String>> = mutableSetOf()
 		
 		for (keyNode in idToKeyNode.values) {
-			result.addAll(toGermanEnglishTranslations(keyNode.translations))
+			result.addAll(toEnglishGermanTranslations(keyNode.translations))
 			
 			for (keyMapping in keyNode.mappings) {
-				result.addAll(toGermanEnglishTranslations(keyMapping.translations))
+				result.addAll(toEnglishGermanTranslations(keyMapping.translations))
 			}
 		}
 		
 		return result
 	}
 	
-	private fun toGermanEnglishTranslations(translations: Collection<KeyTranslation>): Set<Pair<String, String>> {
+	private fun toEnglishGermanTranslations(translations: Collection<KeyTranslation>): Set<Pair<String, String>> {
 		val result: MutableSet<Pair<String, String>> = mutableSetOf()
 
 		val translationMap: MutableMap<Pair<String, String?>, String> = mutableMapOf()

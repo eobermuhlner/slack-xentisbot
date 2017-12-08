@@ -94,12 +94,23 @@ class XentisSysCode {
 		
 		for(syscode in idToSysCode.values) {
 			if (syscode != null) {
-				result.add(Pair(syscode.englishShort, syscode.germanShort))
-				result.add(Pair(syscode.englishMedium, syscode.germanMedium))
+				//result.add(Pair(syscode.englishShort, syscode.germanShort))
+				if (!isAllUppercase(syscode.englishMedium) && !isAllUppercase(syscode.germanMedium)) {
+					result.add(Pair(syscode.englishMedium, syscode.germanMedium))
+				}
 			}
 		}
 
 		return result		
+	}
+	
+	private fun isAllUppercase(text: String): Boolean {
+		for(c in text) {
+			if (c.isLowerCase()) {
+				return false
+			}
+		}
+		return true
 	}
 
 	fun toMessage(syscode: SysCode): String {
@@ -165,19 +176,4 @@ class XentisSysCode {
 			val sortNumber: Int,
 			val defaultEntry: Boolean)
 	
-}
-
-fun <T> limitedForLoop(leftSize: Int, rightSize: Int, elements: Collection<T>, block: (T) -> Unit, skipped: (Int) -> Unit): Unit {
-	var index = 0
-	val n = elements.size
-	for (element in elements) {
-		if (index < leftSize || index >= n - rightSize) {
-			block(element)
-		} else {
-			if (index == leftSize) {
-				skipped(n - leftSize - rightSize)
-			}
-		}
-		index++
-	}
 }

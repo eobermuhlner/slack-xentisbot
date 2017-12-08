@@ -493,20 +493,20 @@ class SimpleBot {
 			return
 		}
 		
-		val perfectResults = HashSet<String>()
-		val partialResults = HashSet<String>()
-		for((source, target) in translations) {
-			if (source.equals(text, ignoreCase=true)) {
-				perfectResults.add(target)
+		val perfectResults = HashSet<Pair<String, String>>()
+		val partialResults = HashSet<Pair<String, String>>()
+		for(translation in translations) {
+			if (translation.first.equals(text, ignoreCase=true)) {
+				perfectResults.add(translation)
 			}
-			if (target.equals(text, ignoreCase=true)) {
-				perfectResults.add(source)
+			if (translation.second.equals(text, ignoreCase=true)) {
+				perfectResults.add(translation)
 			}
-			if (source.contains(text, ignoreCase=true)) {
-				partialResults.add(target)
+			if (translation.first.contains(text, ignoreCase=true)) {
+				partialResults.add(translation)
 			}
-			if (target.contains(text, ignoreCase=true)) {
-				partialResults.add(source)
+			if (translation.second.contains(text, ignoreCase=true)) {
+				partialResults.add(translation)
 			}
 		}
 
@@ -514,15 +514,19 @@ class SimpleBot {
 		if (perfectResults.size > 0) {
 			val translations = plural(perfectResults.size, "translation", "translations")
 			message = "Found ${perfectResults.size} $translations for exactly this term:\n"
-			for (result in limit(sortedList(perfectResults))) {
-				message += "_${result}_\n"
-			}
+			limitedForLoop(10, 0, sortedTranslations(perfectResults), { result ->
+				message += "_${result.first}_ : _${result.second}_ \n"
+			}, { _ ->
+				message += "...)\n"
+			})
 		} else if (partialResults.size > 0) {
-			val translations = plural(perfectResults.size, "translation", "translations")
+			val translations = plural(partialResults.size, "translation", "translations")
 			message = "Found ${partialResults.size} $translations that partially matched this term:\n"
-			for (result in limit(sortedList(partialResults))) {
-				message += "_${result}_\n"
-			}
+			limitedForLoop(10, 0, sortedTranslations(partialResults), { result ->
+				message += "_${result.first}_ : _${result.second}_ \n"
+			}, { _ ->
+				message += "...\n"
+			})
 		} else {
 			message = "No translations found."
 		}
@@ -530,28 +534,12 @@ class SimpleBot {
 		session.sendMessage(event.channel, message)
 	}
 	
-	private fun sortedList(collection: Collection<String>): List<String> {
-		val list: MutableList<String> = mutableListOf()
+	private fun sortedTranslations(collection: Collection<Pair<String, String>>) : List<Pair<String, String>> {
+		val list: MutableList<Pair<String, String>> = mutableListOf()
 		list.addAll(collection)
-		return list.sortedWith(compareBy({ it.length }, { it }))
+		return list.sortedWith(compareBy({ it.first.length }, { it.second.length }, { it.first }, { it.second }))
 	}
 	
-	private fun limit(collection: Collection<String>, maxCount: Int = 10): Collection<String> {
-		val result = ArrayList<String>()
-		val n = Math.min(collection.size, maxCount)
-		
-		val iter = collection.iterator()
-		for(i in 1..n) {
-			result.add(iter.next())
-		}
-		
-		if (n < collection.size) {
-			result.add("...")
-		}
-		
-		return result 
-	} 
-
 	private fun connected(s: SlackSession): SlackSession {
 		s.connect()
 		return s
