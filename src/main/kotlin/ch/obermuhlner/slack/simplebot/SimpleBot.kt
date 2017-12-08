@@ -384,10 +384,12 @@ class SimpleBot {
 		val syscodes = plural(syscodeResults.size, "syscode", "syscodes")
 		var message = "Found ${syscodeResults.size} $syscodes:\n"
 		
-		for (syscode in syscodeResults) {
+		limitedForLoop(10, 0, syscodeResults, { syscode ->
 			message += xentisSysCode.toMessage(syscode)
 			message += "\n"
-		}
+		}, {_ ->
+			message += "..."
+		})
 		
 		session.sendMessage(event.channel, message)
 	}
