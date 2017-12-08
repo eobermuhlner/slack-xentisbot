@@ -5,9 +5,11 @@ import java.io.FileReader
 
 class XentisSysCode {
 	
-	val idToSysCode = mutableMapOf<Long, SysCode?>()
-	val nameToSysCode = mutableMapOf<String, SysCode?>()
+	private val idToSysCode = mutableMapOf<Long, SysCode?>()
+	private val nameToSysCode = mutableMapOf<String, SysCode?>()
 	
+	val translations get() = getAllTranslations()
+
 	fun parse(sysCodeFile: String, sysSubsetFile: String) {
 		idToSysCode.clear()
 		nameToSysCode.clear()
@@ -86,6 +88,19 @@ class XentisSysCode {
 		
 		return result
 	}
+	
+	private fun getAllTranslations(): Set<Pair<String, String>> {
+		val result: MutableSet<Pair<String, String>> = mutableSetOf()
+		
+		for(syscode in idToSysCode.values) {
+			if (syscode != null) {
+				result.add(Pair(syscode.englishShort, syscode.germanShort))
+				result.add(Pair(syscode.englishMedium, syscode.germanMedium))
+			}
+		}
+
+		return result		
+	}
 
 	fun toMessage(syscode: SysCode): String {
 		val groupSyscode = getSysCode(syscode.groupId)
@@ -153,8 +168,6 @@ class XentisSysCode {
 }
 
 fun <T> limitedForLoop(leftSize: Int, rightSize: Int, elements: Collection<T>, block: (T) -> Unit, skipped: (Int) -> Unit): Unit {
-	val x = elements.last()
-	
 	var index = 0
 	val n = elements.size
 	for (element in elements) {

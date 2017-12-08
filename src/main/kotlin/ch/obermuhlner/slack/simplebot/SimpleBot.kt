@@ -68,6 +68,7 @@ class SimpleBot {
 		
 		loadPropertiesTranslations(properties)
 		translations.addAll(xentisPropertiesTranslations.translations)
+		translations.addAll(xentisSysCode.translations)
 	}
 
 	private fun findUser(user: String?): SlackUser? {
@@ -325,6 +326,7 @@ class SimpleBot {
 					|${xentisDbSchema.getTableNames("").size} database tables
 					|${xentisSysCode.findSysCodes("").size} syscodes
 					|${xentisKeyMigration.translations.size} keymigration translations
+					|${xentisSysCode.translations.size} syscode translations
 					|${xentisPropertiesTranslations.translations.size} properties translations
 					|${translations.size} total translations
 					""".trimMargin())
