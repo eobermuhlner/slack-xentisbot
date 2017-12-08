@@ -6,12 +6,14 @@ import java.io.FileReader
 class XentisSysCode {
 	
 	val idToSysCode = mutableMapOf<Long, SysCode?>()
+	val nameToSysCode = mutableMapOf<String, SysCode?>()
 	
 	fun parse(sysCodeFile: String, sysSubsetFile: String) {
 		idToSysCode.clear()
+		nameToSysCode.clear()
 		
 		BufferedReader(FileReader(sysCodeFile)).use {
-			var lastId = 0L
+			var lastId = Long.MAX_VALUE
 			var groupId = 0L
 			for(line in it.readLines()) {
 				val fields = line.split(";")
@@ -30,6 +32,7 @@ class XentisSysCode {
 						englishShort=fields[6],
 						englishMedium=fields[7])
 				idToSysCode[id] = syscode
+				nameToSysCode[syscode.name] = syscode
 				
 				val groupSyscode = idToSysCode[groupId]
 				if (groupSyscode != null) {
@@ -38,11 +41,32 @@ class XentisSysCode {
 				lastId = id
 			}
 		}
+		
+		BufferedReader(FileReader(sysSubsetFile)).use {
+			for(line in it.readLines()) {
+				val fields = line.split(";")
+				val subsetName = fields[0]
+				val entryName = fields[1]
+				val sortNumber = fields[2].toInt()
+				val defaultEntry = fields[3].toInt() != 0
+				
+				val subsetSyscode = nameToSysCode[subsetName]
+				val entrySyscode = nameToSysCode[entryName]
+				
+				if (subsetSyscode != null && entrySyscode != null) {
+					val subsetEntry = SysSubsetEntry(
+							id=entrySyscode.id,
+							sortNumber=sortNumber,
+							defaultEntry=defaultEntry)
+					subsetSyscode.subsetEntries.add(subsetEntry)
+				}
+			}			
+		}
 	}
 	
 	fun isGroupId(id: Long, lastId: Long): Boolean {
 		val delta = id - lastId
-		return delta < 0 || delta > 1000
+		return delta < 0 || (delta >= 0x900 && delta < 0x10000)
 	}
 	
 	fun getSysCode(id: Long): SysCode? {
@@ -67,35 +91,46 @@ class XentisSysCode {
 		val groupSyscode = getSysCode(syscode.groupId)
 
 		var message = "Syscode ${syscode.id.toString(16)} = decimal ${syscode.id}\n"
-		message += "    code: `${syscode.code}`\n"
-		message += "    name: `${syscode.name}`\n"
-		message += "    short translation: _${syscode.germanShort}_ : _${syscode.englishShort}_\n"
-		message += "    medium translation: _${syscode.germanMedium}_ : _${syscode.englishMedium}_\n"
+		message += "\tcode: `${syscode.code}`\n"
+		message += "\tname: `${syscode.name}`\n"
+		message += "\tshort translation: _${syscode.germanShort}_ : _${syscode.englishShort}_\n"
+		message += "\tmedium translation: _${syscode.germanMedium}_ : _${syscode.englishMedium}_\n"
 		
-		message += "    group: ${syscode.groupId.toString(16)}"
+		message += "\tgroup: ${syscode.groupId.toString(16)}"
 		if (groupSyscode != null) {
 			message += " `${groupSyscode.name}`"
 		}
 		message += "\n"
 		
 		if (syscode.children.size > 0) {
-			val maxChildren = 20
-			val childrenText = plural(syscode.children.size, "child", "children")
-			message += "    ${syscode.children.size} $childrenText found\n"
-			for(child in syscode.children.slice(0..Math.min(maxChildren, syscode.children.size-1))) {
-				val childSyscode = getSysCode(child)
-				message += "        ${child.toString(16)}"
-				if (childSyscode != null) {
-					message += " `${childSyscode.name}`"
-				}
-				message += "\n"
-			}
-			if (syscode.children.size > maxChildren) {
-				message += "        ...\n"
-			}
+			val membersText = plural(syscode.children.size, "member", "members")
+			message += "\t${syscode.children.size} group $membersText found\n"
+			
+			limitedForLoop(10, 10, syscode.children, { element ->
+				message += "\t\t${toSysCodeReference(element)}\n"
+			}, { skipped ->
+				message += "\t\t... _(skipping $skipped ${plural(skipped, "member", "members")})_\n"
+			})
+		}			
+
+		if (syscode.subsetEntries.size > 0) {
+			val entriesText = plural(syscode.subsetEntries.size, "entry", "entries")
+			message += "\t${syscode.subsetEntries.size} subset $entriesText found\n"
+			
+			limitedForLoop(10, 10, syscode.subsetEntries, { element ->
+				message += "\t\t${toSysCodeReference(element.id)}\n"
+			}, { skipped ->
+				message += "\t\t... _(skipping $skipped ${plural(skipped, "entry", "entries")})_\n"
+			})
 		}
 		
 		return message
+	}
+	
+	fun toSysCodeReference(id: Long): String {
+		val hexId = id.toString(16)
+		val name = getSysCode(id)?.name.orEmpty() 
+		return "$hexId `$name`"
 	}
 	
 	data class SysCode(
@@ -107,5 +142,29 @@ class XentisSysCode {
 			val germanMedium: String,
 			val englishShort: String,
 			val englishMedium: String,
-			val children: MutableList<Long> = mutableListOf())
+			val children: MutableList<Long> = mutableListOf(),
+			val subsetEntries: MutableList<SysSubsetEntry> = mutableListOf())
+	
+	data class SysSubsetEntry(
+			val id: Long,
+			val sortNumber: Int,
+			val defaultEntry: Boolean)
+	
+}
+
+fun <T> limitedForLoop(leftSize: Int, rightSize: Int, elements: Collection<T>, block: (T) -> Unit, skipped: (Int) -> Unit): Unit {
+	val x = elements.last()
+	
+	var index = 0
+	val n = elements.size
+	for (element in elements) {
+		if (index < leftSize || index >= n - rightSize) {
+			block(element)
+		} else {
+			if (index == leftSize) {
+				skipped(n - leftSize - rightSize)
+			}
+		}
+		index++
+	}
 }
