@@ -8,7 +8,6 @@ import ch.obermuhlner.slack.simplebot.TranslationService.Translation
 import java.util.Properties
 import java.io.FileReader
 import com.ullink.slack.simpleslackapi.impl.SlackSessionFactory
-import com.ullink.slack.simpleslackapi.listeners.SlackMessagePostedListener
 import com.ullink.slack.simpleslackapi.SlackUser
 import com.google.gson.GsonBuilder
 import com.google.gson.FieldNamingPolicy
