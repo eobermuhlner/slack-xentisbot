@@ -36,7 +36,7 @@ class SimpleBot(
 	fun start () {
 		loadData()
 		
-		session.addMessagePostedListener(SlackMessagePostedListener { event, _ ->
+		session.addMessagePostedListener({ event, _ ->
 			handleMessagePosted(event)
 		})
 		
@@ -145,7 +145,7 @@ class SimpleBot(
 		
 		val args = messageContent.split(Pattern.compile("\\s+"))
 		
-		if (args.size == 0 || isCommand(args, "", 0) || isCommand(args, "help", 0)) {
+		if (args.isEmpty() || isCommand(args, "", 0) || isCommand(args, "help", 0)) {
 			respondHelp(event)
 			return
 		}
@@ -360,7 +360,7 @@ class SimpleBot(
 	private fun respondXentisPartialSysCodeText(event: SlackMessagePosted, text: String, failMessage: Boolean=true) {
 		val syscodeResults = sysCodeService.findSysCodes(text)
 		
-		if (syscodeResults.size == 0) {
+		if (syscodeResults.isEmpty()) {
 			if (failMessage) {
 				session.sendMessage(event.channel, "No matching Xentis syscodes found.")
 			}
@@ -380,7 +380,7 @@ class SimpleBot(
 	private fun respondXentisSysCodeText(event: SlackMessagePosted, text: String, failMessage: Boolean=true) {
 		val syscodeResults = sysCodeService.findSysCodes(text)
 		
-		if (syscodeResults.size == 0) {
+		if (syscodeResults.isEmpty()) {
 			if (failMessage) {
 				session.sendMessage(event.channel, "No matching Xentis syscodes found.")
 			}

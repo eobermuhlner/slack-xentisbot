@@ -86,7 +86,7 @@ class XentisSysCodeService : SysCodeService {
 		
 		for(syscode in idToSysCode.values) {
 			if (syscode != null) {
-				if (syscode.code.equals(text) || syscode.name.contains(text)) {
+				if (syscode.code.equals(text, ignoreCase = true) || syscode.name.contains(text, ignoreCase = true)) {
 					result.add(syscode)
 				}
 			}
