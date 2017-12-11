@@ -1,16 +1,19 @@
-package ch.obermuhlner.slack.simplebot
+package ch.obermuhlner.slack.simplebot.xentis
 
+import ch.obermuhlner.slack.simplebot.DbSchemaService
+import ch.obermuhlner.slack.simplebot.DbSchemaService.DbTable
+import ch.obermuhlner.slack.simplebot.DbSchemaService.DbColumn
 import javax.xml.parsers.SAXParserFactory
 import org.xml.sax.helpers.DefaultHandler
 import java.io.File
 import org.xml.sax.Attributes
 
-class XentisDbSchema {
+class XentisDbSchemaService : DbSchemaService {
 
 	private val tableNameToTable = mutableMapOf<String, DbTable?>()
 	private val tableIdToTable = mutableMapOf<Long, DbTable?>()
 		
-	fun parse(schemaFile: String) {
+	override fun parse(schemaFile: String) {
 		tableNameToTable.clear()
 		tableIdToTable.clear()
 		
@@ -79,7 +82,7 @@ class XentisDbSchema {
 		return java.lang.Integer.parseInt(text)
 	}
 	
-	fun getTableNames(partialTableName: String): List<String> {
+	override fun getTableNames(partialTableName: String): List<String> {
 		val uppercasePartialTableName = partialTableName.toUpperCase()
 		val results: MutableList<String> = mutableListOf()
 		for (tableName in tableNameToTable.keys) {
@@ -90,43 +93,15 @@ class XentisDbSchema {
 		return results
 	}
 	
-	fun getTableName(tableId: Long): String? {
+	override fun getTableName(tableId: Long): String? {
 		return tableIdToTable[tableId]?.name
 	}
 	
-	fun getTableId(tableName: String): Long? {
+	override fun getTableId(tableName: String): Long? {
 		return tableNameToTable[tableName.toUpperCase()]?.id
 	}
 	
-	fun getTable(tableName: String): DbTable? {
+	override fun getTable(tableName: String): DbTable? {
 		return tableNameToTable[tableName]
 	}
 }
-
-data class DbTable(
-		val name: String,
-		val id: Long,
-		val columns: MutableList<DbColumn> = mutableListOf()) {
-	fun toMessage(): String {
-		var message = "TABLE $name\n"
-		
-		for(column in columns) {
-			val sizeText = if (column.size == 0) "" else "[${column.size}]"
-			val foreignKeyText = if (column.foreignKey == null) "" else " => ${column.foreignKey}"
-			val referencesText = if (column.references.size == 0) "" else " -> ${column.references}"
-			message += "    %-30s : %-15s (${column.xentisType}) $foreignKeyText$referencesText\n"
-					.format(column.name, "${column.oracleType}$sizeText")
-		}
-		
-		return message
-	}
-}
-
-data class DbColumn(
-		val name: String,
-		var oracleType: String = "",
-		var xentisType: String = "",
-		var size: Int = 0,
-		var foreignKey: String? = null,
-		val references: MutableList<String> = mutableListOf())
-

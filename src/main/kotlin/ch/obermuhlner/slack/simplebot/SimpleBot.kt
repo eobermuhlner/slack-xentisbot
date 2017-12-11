@@ -1,5 +1,10 @@
 package ch.obermuhlner.slack.simplebot
 
+import ch.obermuhlner.slack.simplebot.xentis.XentisDbSchemaService
+import ch.obermuhlner.slack.simplebot.xentis.XentisKeyMigrationService
+import ch.obermuhlner.slack.simplebot.xentis.XentisPropertiesTranslationService
+import ch.obermuhlner.slack.simplebot.xentis.XentisSysCodeService
+import ch.obermuhlner.slack.simplebot.TranslationService.Translation
 import java.util.Properties
 import java.io.FileReader
 import com.ullink.slack.simpleslackapi.impl.SlackSessionFactory
@@ -7,29 +12,27 @@ import com.ullink.slack.simpleslackapi.listeners.SlackMessagePostedListener
 import com.ullink.slack.simpleslackapi.SlackUser
 import com.google.gson.GsonBuilder
 import com.google.gson.FieldNamingPolicy
-import com.ullink.slack.simpleslackapi.SlackChannel
 import com.ullink.slack.simpleslackapi.SlackSession
-import com.ullink.slack.simpleslackapi.events.SlackEvent
 import com.ullink.slack.simpleslackapi.events.SlackMessagePosted
 import java.io.BufferedReader
 import java.util.regex.Pattern
 import java.io.PrintWriter
 import java.io.StringWriter
-import com.ullink.slack.simpleslackapi.SlackAttachment
 
-class SimpleBot {
-	lateinit var session: SlackSession
-	lateinit var user: SlackUser
-	var adminUser: SlackUser? = null
-	
-	val observedChannelIds = HashSet<String>()
+class SimpleBot(
+		private val sysCodeService: SysCodeService = XentisSysCodeService(),
+		private val propertiesTranslations: PropertiesTranslationService = XentisPropertiesTranslationService(),
+		private val dbSchemaService: DbSchemaService = XentisDbSchemaService(),
+		private val keyMigrationService: KeyMigrationService = XentisKeyMigrationService()) {
 
-	val translations = mutableSetOf<XentisTranslation>() 
-	val xentisPropertiesTranslations = XentisPropertiesTranslations()
-	val xentisDbSchema = XentisDbSchema()
-	val xentisKeyMigration = XentisKeyMigration()
-	val xentisSysCode = XentisSysCode()
-	
+	private lateinit var session: SlackSession
+	private lateinit var user: SlackUser
+	private var adminUser: SlackUser? = null
+
+	private val observedChannelIds = HashSet<String>()
+
+	private val translations = mutableSetOf<Translation>()
+
 	fun start () {
 		loadData()
 		
@@ -51,24 +54,24 @@ class SimpleBot {
 		
 		val xentisSchemaFileName = properties.getProperty("xentis.schema")
 		if (xentisSchemaFileName != null) {
-			xentisDbSchema.parse(xentisSchemaFileName)
+			dbSchemaService.parse(xentisSchemaFileName)
 		}
 		
 		val xentisKeyMigrationFileName = properties.getProperty("xentis.keymigration")
 		if (xentisKeyMigrationFileName != null) {
-			xentisKeyMigration.parse(xentisKeyMigrationFileName)
-			translations.addAll(xentisKeyMigration.translations)
+			keyMigrationService.parse(xentisKeyMigrationFileName)
+			translations.addAll(keyMigrationService.translations)
 		}
 
 		val xentisSysCodeFileName = properties.getProperty("xentis.syscode")
 		val xentisSysSubsetFileName = properties.getProperty("xentis.syssubset")
 		if (xentisSysCodeFileName != null && xentisSysSubsetFileName != null) {
-			xentisSysCode.parse(xentisSysCodeFileName, xentisSysSubsetFileName)
+			sysCodeService.parse(xentisSysCodeFileName, xentisSysSubsetFileName)
 		}
 		
 		loadPropertiesTranslations(properties)
-		translations.addAll(xentisPropertiesTranslations.translations)
-		translations.addAll(xentisSysCode.translations)
+		translations.addAll(propertiesTranslations.translations)
+		translations.addAll(sysCodeService.translations)
 	}
 
 	private fun findUser(user: String?): SlackUser? {
@@ -118,20 +121,23 @@ class SimpleBot {
 	}
 		
 	fun loadPropertiesTranslations(properties: Properties) {
+		propertiesTranslations.clear()
+
 		var translationIndex = 0
 		
-		var file1: String?
-		var file2: String?
-		
+		var success: Boolean
 		do {
 			translationIndex++
-			file1 = properties.getProperty("translation.${translationIndex}.source.properties")
-			file2 = properties.getProperty("translation.${translationIndex}.target.properties")
-	
+			val file1 = properties.getProperty("translation.${translationIndex}.source.properties")
+			val file2 = properties.getProperty("translation.${translationIndex}.target.properties")
+
 			if (file1 != null && file2 != null) {
-				xentisPropertiesTranslations.parse(file1, file2)
+				propertiesTranslations.parse(file1, file2)
+				success = true
+			} else {
+				success = false
 			}
-		} while (file1 != null && file2 != null)
+		} while (success)
 	}
 	
 	fun respondToMessage(event: SlackMessagePosted , messageContent: String) {
@@ -323,11 +329,11 @@ class SimpleBot {
 	
 	private fun respondStatus(event: SlackMessagePosted) {
 			session.sendMessage(event.channel, """
-					|${xentisDbSchema.getTableNames("").size} database tables
-					|${xentisSysCode.findSysCodes("").size} syscodes
-					|${xentisKeyMigration.translations.size} keymigration translations
-					|${xentisSysCode.translations.size} syscode translations
-					|${xentisPropertiesTranslations.translations.size} properties translations
+					|${dbSchemaService.getTableNames("").size} database tables
+					|${sysCodeService.findSysCodes("").size} syscodes
+					|${keyMigrationService.translations.size} keymigration translations
+					|${sysCodeService.translations.size} syscode translations
+					|${propertiesTranslations.translations.size} properties translations
 					|${translations.size} total translations
 					""".trimMargin())
 	}
@@ -339,7 +345,7 @@ class SimpleBot {
 	}
 
 	private fun respondXentisSysCodeId(event: SlackMessagePosted, id: Long, failMessage: Boolean=true) {
-		val syscode = xentisSysCode.getSysCode(id)
+		val syscode = sysCodeService.getSysCode(id)
 		
 		if (syscode == null) {
 			if (failMessage) {
@@ -348,11 +354,11 @@ class SimpleBot {
 			return
 		}
 		
-		session.sendMessage(event.channel, xentisSysCode.toMessage(syscode))
+		session.sendMessage(event.channel, sysCodeService.toMessage(syscode))
 	}
 
 	private fun respondXentisPartialSysCodeText(event: SlackMessagePosted, text: String, failMessage: Boolean=true) {
-		val syscodeResults = xentisSysCode.findSysCodes(text)
+		val syscodeResults = sysCodeService.findSysCodes(text)
 		
 		if (syscodeResults.size == 0) {
 			if (failMessage) {
@@ -372,7 +378,7 @@ class SimpleBot {
 	}
 		
 	private fun respondXentisSysCodeText(event: SlackMessagePosted, text: String, failMessage: Boolean=true) {
-		val syscodeResults = xentisSysCode.findSysCodes(text)
+		val syscodeResults = sysCodeService.findSysCodes(text)
 		
 		if (syscodeResults.size == 0) {
 			if (failMessage) {
@@ -385,7 +391,7 @@ class SimpleBot {
 		var message = "Found ${syscodeResults.size} $syscodes:\n"
 		
 		limitedForLoop(10, 0, syscodeResults, { syscode ->
-			message += xentisSysCode.toMessage(syscode)
+			message += sysCodeService.toMessage(syscode)
 			message += "\n"
 		}, {_ ->
 			message += "..."
@@ -397,7 +403,7 @@ class SimpleBot {
 	private fun respondAnalyzeXentisClassPart(event: SlackMessagePosted, text: String, failMessage: Boolean=true) {
 		val xentisClassPartText = text.substring(0, 4)
 		val xentisClassPart = java.lang.Long.parseLong(xentisClassPartText, 16) and 0xfff
-		val tableName = xentisDbSchema.getTableName(xentisClassPart)
+		val tableName = dbSchemaService.getTableName(xentisClassPart)
 		
 		if (tableName != null) {
 			session.sendMessage(event.channel, "The classpart $xentisClassPartText indicates a Xentis table $tableName")
@@ -411,12 +417,12 @@ class SimpleBot {
 	private fun respondXentisTableName(event: SlackMessagePosted, text: String, failMessage: Boolean=true) {
 		val tableName = text.toUpperCase()
 		
-		val table = xentisDbSchema.getTable(tableName)
+		val table = dbSchemaService.getTable(tableName)
 		if (table != null) {
 			session.sendFile(event.channel, table.toMessage().toByteArray(), "TABLE_$tableName.txt")
 		}
 		
-		val tableId = xentisDbSchema.getTableId(tableName)
+		val tableId = dbSchemaService.getTableId(tableName)
 		if (tableId != null) {
 			val xentisClassPartText = (tableId or 0x1000).toString(16).padStart(4, '0')
 			session.sendMessage(event.channel, "The classpart of the Xentis table $tableName is $xentisClassPartText")
@@ -428,7 +434,7 @@ class SimpleBot {
 	}
 	
 	private fun respondXentisPartialTableName(event: SlackMessagePosted, text: String, failMessage: Boolean=true) {
-		val tableNames = xentisDbSchema.getTableNames(text).sorted()
+		val tableNames = dbSchemaService.getTableNames(text).sorted()
 		
 		if (tableNames.isEmpty()) {
 			if (failMessage) {
@@ -455,7 +461,7 @@ class SimpleBot {
 			return
 		}
 		
-		val keyNode = xentisKeyMigration.getKeyNode(id)
+		val keyNode = keyMigrationService.getKeyNode(id)
 		if (keyNode == null) {
 			if (failMessage) {
 				session.sendMessage(event.channel, "No Xentis key node found for id: $id")
@@ -463,7 +469,7 @@ class SimpleBot {
 			return
 		}
 		
-		session.sendMessage(event.channel, xentisKeyMigration.toMessage(keyNode))
+		session.sendMessage(event.channel, keyMigrationService.toMessage(keyNode))
 	}
 	
 	private fun respondNumberConversion(event: SlackMessagePosted, text: String, base: Int, failMessage: Boolean=true, introMessage: Boolean=true) {
@@ -495,8 +501,8 @@ class SimpleBot {
 			return
 		}
 		
-		val perfectResults = mutableSetOf<XentisTranslation>()
-		val partialResults = mutableSetOf<XentisTranslation>()
+		val perfectResults = mutableSetOf<Translation>()
+		val partialResults = mutableSetOf<Translation>()
 		for(translation in translations) {
 			if (translation.english.equals(text, ignoreCase=true)) {
 				perfectResults.add(translation)
@@ -536,8 +542,8 @@ class SimpleBot {
 		session.sendMessage(event.channel, message)
 	}
 	
-	private fun sortedTranslations(collection: Collection<XentisTranslation>) : List<XentisTranslation> {
-		val list: MutableList<XentisTranslation> = mutableListOf()
+	private fun sortedTranslations(collection: Collection<Translation>) : List<Translation> {
+		val list: MutableList<Translation> = mutableListOf()
 		list.addAll(collection)
 		return list.sortedWith(compareBy({ it.english.length }, { it.german.length }, { it.english }, { it.german }))
 	}
@@ -593,10 +599,6 @@ private class AuthTestResponse {
 	var teamId: String = ""
 	var team: String = ""
 }
-
-data class XentisTranslation(
-		val english: String,
-		val german: String)
 
 fun main(args: Array<String>) {
 	val bot = SimpleBot()

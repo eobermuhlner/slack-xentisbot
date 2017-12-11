@@ -28,4 +28,6 @@ dependencies {
             "com.ullink.slack:simpleslackapi:$slackapi_version",
             "org.slf4j:slf4j-simple:$slf4j_version"
     )
+    
+    testCompile 'junit:junit:4.12'
 }

@@ -1,16 +1,21 @@
-package ch.obermuhlner.slack.simplebot
+package ch.obermuhlner.slack.simplebot.xentis
 
+import ch.obermuhlner.slack.simplebot.KeyMigrationService
+import ch.obermuhlner.slack.simplebot.KeyMigrationService.KeyNode
+import ch.obermuhlner.slack.simplebot.KeyMigrationService.KeyMapping
+import ch.obermuhlner.slack.simplebot.KeyMigrationService.KeyTranslation
+import ch.obermuhlner.slack.simplebot.TranslationService.Translation
 import javax.xml.parsers.SAXParserFactory
 import org.xml.sax.helpers.DefaultHandler
 import org.xml.sax.Attributes
 import java.io.File
 
-class XentisKeyMigration {
+class XentisKeyMigrationService : KeyMigrationService {
 	private val idToKeyNode: MutableMap<Int, KeyNode> = mutableMapOf()
 	
-	val translations get() = getAllTranslations()
+	override val translations get() = getAllTranslations()
 	
-	fun parse(keyMigrationFile: String) {
+	override fun parse(keyMigrationFile: String) {
 		idToKeyNode.clear()
 		
 		val factory = SAXParserFactory.newInstance()
@@ -29,12 +34,12 @@ class XentisKeyMigration {
 						val parent: KeyNode? = keyNodeStack.lastOrNull()
 						val parentId: Int? = parent?.id
 						val keyNode = KeyNode(
-								id = parseInt(attributes.getValue("id")),
-								name = attributes.getValue("name"),
-								type = attributes.getValue("standardComponentType"),
-								parent = parentId,
-								actionKey = parseInt(attributes.getValue("actionKeyNode")),
-								referenced = parseInt(attributes.getValue("referencedNode")))
+                                id = parseInt(attributes.getValue("id")),
+                                name = attributes.getValue("name"),
+                                type = attributes.getValue("standardComponentType"),
+                                parent = parentId,
+                                actionKey = parseInt(attributes.getValue("actionKeyNode")),
+                                referenced = parseInt(attributes.getValue("referencedNode")))
 						idToKeyNode[keyNode.id] = keyNode
 						keyNodeStack.add(keyNode)
 						if (parent != null) {
@@ -60,8 +65,8 @@ class XentisKeyMigration {
 					}
 					"keyMapping" -> {
 						val keyMapping = KeyMapping(
-								id = parseInt(attributes.getValue("id")),
-								refId = parseInt(attributes.getValue("refId")))
+                                id = parseInt(attributes.getValue("id")),
+                                refId = parseInt(attributes.getValue("refId")))
 						val keyNode: KeyNode = keyNodeStack.last()
 						keyNode.mappings.add(keyMapping)
 						currentKeyMapping = keyMapping
@@ -91,8 +96,8 @@ class XentisKeyMigration {
 		return java.lang.Integer.parseInt(text)
 	}
 	
-	private fun getAllTranslations(): Set<XentisTranslation> {
-		val result: MutableSet<XentisTranslation> = mutableSetOf()
+	private fun getAllTranslations(): Set<Translation> {
+		val result: MutableSet<Translation> = mutableSetOf()
 		
 		for (keyNode in idToKeyNode.values) {
 			result.addAll(toEnglishGermanTranslations(keyNode.translations))
@@ -105,8 +110,8 @@ class XentisKeyMigration {
 		return result
 	}
 	
-	private fun toEnglishGermanTranslations(translations: Collection<KeyTranslation>): Set<XentisTranslation> {
-		val result: MutableSet<XentisTranslation> = mutableSetOf()
+	private fun toEnglishGermanTranslations(translations: Collection<KeyTranslation>): Set<Translation> {
+		val result: MutableSet<Translation> = mutableSetOf()
 
 		val translationMap: MutableMap<Pair<String, String?>, String> = mutableMapOf()
 		val translationTypes: MutableSet<String?> = mutableSetOf()
@@ -119,21 +124,21 @@ class XentisKeyMigration {
 			val english = translationMap[Pair("EN", translationType)] 
 			val german = translationMap[Pair("DE", translationType)]
 			if (english != null && german != null) {
-				result.add(XentisTranslation(english, german))
+				result.add(Translation(english, german))
 			} 
 		}
 		
 		return result
 	}
 	
-	fun getKeyNode(id: Int?): KeyNode? {
+	override fun getKeyNode(id: Int?): KeyNode? {
 		if (id == null) {
 			return null
 		}
 		return idToKeyNode[id]
 	}
 
-	fun toMessage(keyNode: KeyNode): String {
+	override fun toMessage(keyNode: KeyNode): String {
 		val referencedKeyNode = getKeyNode(keyNode.referenced)
 		var message = "Key ${keyNode.id} ${italic(keyNode.name)}"
 		message += prefix(" type", italic(keyNode.type))
@@ -189,25 +194,4 @@ class XentisKeyMigration {
 			return "_${value}_"
 		}
 	}
-
-	data class KeyNode(
-			val id: Int,
-			val name: String?,
-			val type: String?,
-			val parent: Int?,
-			val actionKey: Int?,
-			val referenced: Int?,
-			val children: MutableList<Int> = mutableListOf(),
-			val mappings: MutableList<KeyMapping> = mutableListOf(),
-			val translations: MutableList<KeyTranslation> = mutableListOf())
-	
-	data class KeyMapping(
-			val id: Int,
-			val refId: Int,
-			val translations: MutableList<KeyTranslation> = mutableListOf())
-	
-	data class KeyTranslation(
-			val language: String,
-			val type: String?,
-			val text: String)
 }
