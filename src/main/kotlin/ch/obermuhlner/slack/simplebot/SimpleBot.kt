@@ -132,7 +132,7 @@ class SimpleBot(
 			val file2 = properties.getProperty("translation.${translationIndex}.target.properties")
 
 			if (file1 != null && file2 != null) {
-				propertiesTranslations.parse(file1, file2)
+				propertiesTranslations.parse(loadProperties(file1), loadProperties(file2))
 				success = true
 			} else {
 				success = false
