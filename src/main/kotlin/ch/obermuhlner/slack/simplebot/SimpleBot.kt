@@ -65,7 +65,8 @@ class SimpleBot(
 		val xentisSysCodeFileName = properties.getProperty("xentis.syscode")
 		val xentisSysSubsetFileName = properties.getProperty("xentis.syssubset")
 		if (xentisSysCodeFileName != null && xentisSysSubsetFileName != null) {
-			sysCodeService.parse(xentisSysCodeFileName, xentisSysSubsetFileName)
+			sysCodeService.parseSysCodes(FileReader(xentisSysCodeFileName))
+            sysCodeService.parseSysSubsets(FileReader(xentisSysSubsetFileName))
 		}
 		
 		loadPropertiesTranslations(properties)

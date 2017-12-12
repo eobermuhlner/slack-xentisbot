@@ -7,50 +7,52 @@ import ch.obermuhlner.slack.simplebot.TranslationService.Translation
 import ch.obermuhlner.slack.simplebot.limitedForLoop
 import ch.obermuhlner.slack.simplebot.plural
 import java.io.BufferedReader
-import java.io.FileReader
+import java.io.Reader
 
 class XentisSysCodeService : SysCodeService {
-	
-	private val idToSysCode = mutableMapOf<Long, SysCode?>()
-	private val nameToSysCode = mutableMapOf<String, SysCode?>()
-	
-	override val translations get() = getAllTranslations()
 
-	override fun parse(sysCodeFile: String, sysSubsetFile: String) {
-		idToSysCode.clear()
-		nameToSysCode.clear()
-		
-		BufferedReader(FileReader(sysCodeFile)).use {
-			var lastId = Long.MAX_VALUE
-			var groupId = 0L
-			for(line in it.readLines()) {
-				val fields = line.split(";")
-				val id = fields[0].toLong() + 0x1051_0000_0000_0000L
-				if (isGroupId(id, lastId)) {
-					groupId = id
-				}
-				
-				val syscode = SysCode(
-						id = id,
-						groupId = groupId,
-						code = fields[2],
-						name = fields[3],
-						germanShort = fields[4],
-						germanMedium = fields[5],
-						englishShort = fields[6],
-						englishMedium = fields[7])
-				idToSysCode[id] = syscode
-				nameToSysCode[syscode.name] = syscode
-				
-				val groupSyscode = idToSysCode[groupId]
-				if (groupSyscode != null) {
-					groupSyscode.children.add(id)
-				} 
-				lastId = id
-			}
-		}
-		
-		BufferedReader(FileReader(sysSubsetFile)).use {
+    private val idToSysCode = mutableMapOf<Long, SysCode?>()
+    private val nameToSysCode = mutableMapOf<String, SysCode?>()
+
+    override val translations get() = getAllTranslations()
+
+    override fun parseSysCodes(sysCodeReader: Reader) {
+        idToSysCode.clear()
+        nameToSysCode.clear()
+
+        BufferedReader(sysCodeReader).use {
+            var lastId = Long.MAX_VALUE
+            var groupId = 0L
+            for (line in it.readLines()) {
+                val fields = line.split(";")
+                val id = fields[0].toLong() + 0x1051_0000_0000_0000L
+                if (isGroupId(id, lastId)) {
+                    groupId = id
+                }
+
+                val syscode = SysCode(
+                        id = id,
+                        groupId = groupId,
+                        code = fields[2],
+                        name = fields[3],
+                        germanShort = fields[4],
+                        germanMedium = fields[5],
+                        englishShort = fields[6],
+                        englishMedium = fields[7])
+                idToSysCode[id] = syscode
+                nameToSysCode[syscode.name] = syscode
+
+                val groupSyscode = idToSysCode[groupId]
+                if (groupSyscode != null) {
+                    groupSyscode.children.add(id)
+                }
+                lastId = id
+            }
+        }
+    }
+
+    override fun parseSysSubsets(sysSubsetReader: Reader) {
+		BufferedReader(sysSubsetReader).use {
 			for(line in it.readLines()) {
 				val fields = line.split(";")
 				val subsetName = fields[0]
@@ -100,7 +102,6 @@ class XentisSysCodeService : SysCodeService {
 		
 		for(syscode in idToSysCode.values) {
 			if (syscode != null) {
-				//result.add(Pair(syscode.englishShort, syscode.germanShort))
 				if (!isAllUppercase(syscode.englishMedium) && !isAllUppercase(syscode.germanMedium)) {
 					result.add(Translation(syscode.englishMedium, syscode.germanMedium))
 				}

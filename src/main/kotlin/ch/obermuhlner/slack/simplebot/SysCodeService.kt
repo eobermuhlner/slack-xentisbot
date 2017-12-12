@@ -1,8 +1,11 @@
 package ch.obermuhlner.slack.simplebot
 
+import java.io.Reader
+
 interface SysCodeService : TranslationService {
 
-    fun parse(sysCodeFile: String, sysSubsetFile: String)
+    fun parseSysCodes(sysCodeReader: Reader)
+    fun parseSysSubsets(sysSubsetReader: Reader)
 
     fun getSysCode(id: Long): SysCodeService.SysCode?
 
