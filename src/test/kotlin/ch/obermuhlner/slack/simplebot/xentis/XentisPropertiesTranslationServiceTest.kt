@@ -27,14 +27,14 @@ class XentisPropertiesTranslationServiceTest {
     }
 
     @Test
-    fun testTranslate() {
+    fun test_translations() {
         assertEquals(2, service.translations.size)
         assertEquals(true, service.translations.contains(Translation("one", "eins")))
         assertEquals(true, service.translations.contains(Translation("two", "zwei")))
     }
 
     @Test
-    fun testTranslate2() {
+    fun test_translations_multiple_parse() {
         assertEquals(2, service.translations.size)
 
         val englishProperties = Properties()
@@ -50,7 +50,7 @@ class XentisPropertiesTranslationServiceTest {
     }
 
     @Test
-    fun testClear() {
+    fun test_clear() {
         assertEquals(2, service.translations.size)
 
         service.clear()

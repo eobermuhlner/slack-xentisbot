@@ -8,14 +8,15 @@ import ch.obermuhlner.slack.simplebot.TranslationService.Translation
 import javax.xml.parsers.SAXParserFactory
 import org.xml.sax.helpers.DefaultHandler
 import org.xml.sax.Attributes
-import java.io.File
+import org.xml.sax.InputSource
+import java.io.Reader
 
 class XentisKeyMigrationService : KeyMigrationService {
 	private val idToKeyNode: MutableMap<Int, KeyNode> = mutableMapOf()
 	
 	override val translations get() = getAllTranslations()
 	
-	override fun parse(keyMigrationFile: String) {
+	override fun parse(keyMigrationReader: Reader) {
 		idToKeyNode.clear()
 		
 		val factory = SAXParserFactory.newInstance()
@@ -86,7 +87,7 @@ class XentisKeyMigrationService : KeyMigrationService {
 			}
 		}
 		
-		parser.parse(File(keyMigrationFile), handler)
+		parser.parse(InputSource(keyMigrationReader), handler)
 	}
 	
 	private fun parseInt(text: String?, defaultValue: Int = 0): Int {

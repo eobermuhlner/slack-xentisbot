@@ -55,7 +55,7 @@ class SimpleBot(
 		
 		val xentisKeyMigrationFileName = properties.getProperty("xentis.keymigration")
 		if (xentisKeyMigrationFileName != null) {
-			keyMigrationService.parse(xentisKeyMigrationFileName)
+			keyMigrationService.parse(FileReader(xentisKeyMigrationFileName))
 			translations.addAll(keyMigrationService.translations)
 		}
 

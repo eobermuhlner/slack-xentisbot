@@ -1,10 +1,10 @@
 package ch.obermuhlner.slack.simplebot
 
-import ch.obermuhlner.slack.simplebot.TranslationService.Translation
+import java.io.Reader
 
 interface KeyMigrationService : TranslationService {
 
-    fun parse(keyMigrationFile: String)
+    fun parse(keyMigrationReader: Reader)
 
     fun getKeyNode(id: Int?): KeyNode?
 
@@ -17,14 +17,14 @@ interface KeyMigrationService : TranslationService {
             val parent: Int?,
             val actionKey: Int?,
             val referenced: Int?,
-            val children: MutableList<Int> = mutableListOf(),
-            val mappings: MutableList<KeyMapping> = mutableListOf(),
-            val translations: MutableList<KeyTranslation> = mutableListOf())
+            val children: MutableSet<Int> = mutableSetOf(),
+            val mappings: MutableSet<KeyMapping> = mutableSetOf(),
+            val translations: MutableSet<KeyTranslation> = mutableSetOf())
 
     data class KeyMapping(
             val id: Int,
             val refId: Int,
-            val translations: MutableList<KeyTranslation> = mutableListOf())
+            val translations: MutableSet<KeyTranslation> = mutableSetOf())
 
     data class KeyTranslation(
             val language: String,
