@@ -132,4 +132,21 @@ class XentisDbSchemaServiceTest {
         assertEquals("bitset", columnVerknartBits.xentisType)
         assertEquals(false, columnVerknartBits.nullable)
     }
+
+    @Test
+    fun test_toMessage() {
+        val tableExample = service.getTable("EXAMPLE")!!
+
+        val expected = """
+            |TABLE EXAMPLE
+            |    EXAMPLE_ID                     : RAW[8]          (id)
+            |    IDENTEXT_TXT                   : VARCHAR2[50]    (string)
+            |    INSTITUT_ID                    : RAW[8]          (id) => INSTITUT
+            |    INAKTIV_DAT                    : DATE            (date)
+            |    SYSVERKNART_BIT                : RAW[8]          (bitset)
+            |
+            """.trimMargin()
+        val actual = tableExample.toMessage()
+        assertEquals(expected, actual)
+    }
 }

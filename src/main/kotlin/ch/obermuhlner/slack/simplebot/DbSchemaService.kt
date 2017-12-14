@@ -28,7 +28,7 @@ interface DbSchemaService {
                 val sizeText = if (column.size == 0) "" else "[${column.size}]"
                 val foreignKeyText = if (column.foreignKey == null) "" else " => ${column.foreignKey}"
                 val referencesText = if (column.references.size == 0) "" else " -> ${column.references}"
-                message += "    %-30s : %-15s (${column.xentisType}) $foreignKeyText$referencesText\n"
+                message += "    %-30s : %-15s (${column.xentisType})$foreignKeyText$referencesText\n"
                         .format(column.name, "${column.oracleType}$sizeText")
             }
 
