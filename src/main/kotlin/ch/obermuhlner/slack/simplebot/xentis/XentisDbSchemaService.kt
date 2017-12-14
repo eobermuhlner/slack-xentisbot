@@ -5,15 +5,16 @@ import ch.obermuhlner.slack.simplebot.DbSchemaService.DbTable
 import ch.obermuhlner.slack.simplebot.DbSchemaService.DbColumn
 import javax.xml.parsers.SAXParserFactory
 import org.xml.sax.helpers.DefaultHandler
-import java.io.File
 import org.xml.sax.Attributes
+import org.xml.sax.InputSource
+import java.io.Reader
 
 class XentisDbSchemaService : DbSchemaService {
 
 	private val tableNameToTable = mutableMapOf<String, DbTable?>()
 	private val tableIdToTable = mutableMapOf<Long, DbTable?>()
 		
-	override fun parse(schemaFile: String) {
+	override fun parse(schemaReader: Reader) {
 		tableNameToTable.clear()
 		tableIdToTable.clear()
 		
@@ -65,7 +66,7 @@ class XentisDbSchemaService : DbSchemaService {
 			}
 		}
 		
-		parser.parse(File(schemaFile), handler)
+		parser.parse(InputSource(schemaReader), handler)
 	}
 	
 	private fun parseLong(text: String?, defaultValue: Long = 0): Long {

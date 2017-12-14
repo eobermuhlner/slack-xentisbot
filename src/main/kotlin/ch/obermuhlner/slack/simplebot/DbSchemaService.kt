@@ -1,8 +1,10 @@
 package ch.obermuhlner.slack.simplebot
 
+import java.io.Reader
+
 interface DbSchemaService {
 
-    fun parse(schemaFile: String)
+    fun parse(schemaReader: Reader)
 
     fun getTableNames(partialTableName: String): List<String>
 
