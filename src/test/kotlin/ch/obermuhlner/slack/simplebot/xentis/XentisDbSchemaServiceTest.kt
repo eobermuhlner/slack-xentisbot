@@ -63,7 +63,7 @@ class XentisDbSchemaServiceTest {
     }
 
     @Test
-    fun test_getTable() {
+    fun test_getTable_EXAMPLE() {
         val tableExample = service.getTable("EXAMPLE")
         assertEquals(2L, tableExample!!.id)
         assertEquals("EXAMPLE", tableExample.name)
@@ -73,7 +73,7 @@ class XentisDbSchemaServiceTest {
     }
 
     @Test
-    fun test_getTable_column_exampleId() {
+    fun test_getTable_EXAMPLE_column_exampleId() {
         val tableExample = service.getTable("EXAMPLE")!!
 
         val columnExampleId = tableExample.columns[0]
@@ -85,7 +85,7 @@ class XentisDbSchemaServiceTest {
     }
 
     @Test
-    fun test_getTable_column_identTxt() {
+    fun test_getTable_EXAMPLE_column_identTxt() {
         val tableExample = service.getTable("EXAMPLE")!!
 
         val columnIdentTxt = tableExample.columns[1]
@@ -97,7 +97,7 @@ class XentisDbSchemaServiceTest {
     }
 
     @Test
-    fun test_getTable_column_institutId() {
+    fun test_getTable_EXAMPLE_column_institutId() {
         val tableExample = service.getTable("EXAMPLE")!!
 
         val columnInstitutId = tableExample.columns[2]
@@ -110,7 +110,7 @@ class XentisDbSchemaServiceTest {
     }
 
     @Test
-    fun test_getTable_column_inaktivDat() {
+    fun test_getTable_EXAMPLE_column_inaktivDat() {
         val tableExample = service.getTable("EXAMPLE")!!
 
         val columnInaktivDat = tableExample.columns[3]
@@ -122,7 +122,7 @@ class XentisDbSchemaServiceTest {
     }
 
     @Test
-    fun test_getTable_column_verknartBits() {
+    fun test_getTable_EXAMPLE_column_verknartBits() {
         val tableExample = service.getTable("EXAMPLE")!!
 
         val columnVerknartBits = tableExample.columns[4]
@@ -134,7 +134,7 @@ class XentisDbSchemaServiceTest {
     }
 
     @Test
-    fun test_toMessage() {
+    fun test_getTable_EXAMPLE_toMessage() {
         val tableExample = service.getTable("EXAMPLE")!!
 
         val expected = """
