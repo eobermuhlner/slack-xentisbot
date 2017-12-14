@@ -17,7 +17,10 @@ interface DbSchemaService {
     data class DbTable(
             val name: String,
             val id: Long,
+            val alias: String?,
+            val codeTabGroup: String?,
             val columns: MutableList<DbColumn> = mutableListOf()) {
+
         fun toMessage(): String {
             var message = "TABLE $name\n"
 
@@ -38,6 +41,7 @@ interface DbSchemaService {
             var oracleType: String = "",
             var xentisType: String = "",
             var size: Int = 0,
+            var nullable: Boolean = false,
             var foreignKey: String? = null,
             val references: MutableList<String> = mutableListOf())
 }

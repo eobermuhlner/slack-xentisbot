@@ -22,7 +22,7 @@ class XentisDbSchemaService : DbSchemaService {
 		val parser = factory.newSAXParser()
 		
 		val handler = object: DefaultHandler() {
-			var table: DbTable = DbTable("?", 0)
+			var table: DbTable = DbTable("?", 0, "?", "?")
 			var column: DbColumn = DbColumn("?")
 			var currentElementName: String? = null
 			
@@ -30,13 +30,13 @@ class XentisDbSchemaService : DbSchemaService {
 				currentElementName = qName
 				when (qName) {
 					"Table" -> {
-						table = DbTable(attributes.getValue("name"), parseLong(attributes.getValue("id")))
+						table = DbTable(attributes.getValue("name"), parseLong(attributes.getValue("id")), attributes.getValue("alias"), attributes.getValue("codeTabGroup"))
 						tableNameToTable[table.name] = table
 						tableIdToTable[table.id] = table
-						
 					}
 					"Column" -> {
 						column = DbColumn(attributes.getValue("name"))
+						column.nullable = attributes.getValue("nullable").toBoolean()
 						table.columns.add(column)
 					}
 					"Format" -> {

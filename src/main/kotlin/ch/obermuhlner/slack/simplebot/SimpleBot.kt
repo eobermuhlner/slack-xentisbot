@@ -1,10 +1,7 @@
 package ch.obermuhlner.slack.simplebot
 
-import ch.obermuhlner.slack.simplebot.xentis.XentisDbSchemaService
-import ch.obermuhlner.slack.simplebot.xentis.XentisKeyMigrationService
-import ch.obermuhlner.slack.simplebot.xentis.XentisPropertiesTranslationService
-import ch.obermuhlner.slack.simplebot.xentis.XentisSysCodeService
 import ch.obermuhlner.slack.simplebot.TranslationService.Translation
+import ch.obermuhlner.slack.simplebot.xentis.*
 import java.util.Properties
 import java.io.FileReader
 import com.ullink.slack.simpleslackapi.impl.SlackSessionFactory
@@ -53,7 +50,7 @@ class SimpleBot(
 		
 		val xentisSchemaFileName = properties.getProperty("xentis.schema")
 		if (xentisSchemaFileName != null) {
-			dbSchemaService.parse(xentisSchemaFileName)
+			dbSchemaService.parse(FileReader(xentisSchemaFileName))
 		}
 		
 		val xentisKeyMigrationFileName = properties.getProperty("xentis.keymigration")

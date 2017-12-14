@@ -14,9 +14,9 @@ class XentisDbSchemaServiceTest {
         service = XentisDbSchemaService()
 
         service.parse(StringReader("""
-            | <Table name="ADRESSE" id="0002" type="General" blockSize="10" cachingStrategy="KeepRecent" alias="Address">
+            | <Table name="EXAMPLE" id="0002" type="General" blockSize="10" cachingStrategy="KeepRecent" codeTabGroup="Valor" alias="Example">
             |      <Columns>
-            |        <Column name="ADRESSE_ID" nullable="false">
+            |        <Column name="EXAMPLE_ID" nullable="false">
             |          <Format oracle="RAW" size="8" xentis="id"/>
             |        </Column>
             |        <Column name="IDENTEXT_TXT" nullable="true">
@@ -40,64 +40,96 @@ class XentisDbSchemaServiceTest {
 
     @Test
     fun test_getTableId() {
-        val id = service.getTableId("ADRESSE")
+        val id = service.getTableId("EXAMPLE")
         assertEquals(2L, id)
     }
 
     @Test
     fun test_getTableName() {
         val name = service.getTableName(2L)
-        assertEquals("ADRESSE", name)
+        assertEquals("EXAMPLE", name)
     }
 
     @Test
     fun test_getTableNames() {
-        val names = service.getTableNames("ADR")
-        assertEquals(listOf("ADRESSE"), names)
+        val names = service.getTableNames("EXAM")
+        assertEquals(listOf("EXAMPLE"), names)
     }
 
     @Test
-    fun test_getTable_UKNOWN() {
+    fun test_getTable_UNKNOWN() {
         val tableNull = service.getTable("UNKNOWN")
         assertEquals(null, tableNull)
     }
 
     @Test
     fun test_getTable() {
-        val tableAdresse = service.getTable("ADRESSE")
-        assertEquals(2L, tableAdresse!!.id)
-        assertEquals("ADRESSE", tableAdresse.name)
-        assertEquals(5, tableAdresse.columns.size)
+        val tableExample = service.getTable("EXAMPLE")
+        assertEquals(2L, tableExample!!.id)
+        assertEquals("EXAMPLE", tableExample.name)
+        assertEquals(5, tableExample.columns.size)
+        assertEquals("Example", tableExample.alias)
+        assertEquals("Valor", tableExample.codeTabGroup)
+    }
 
-        val columnAdresseId = tableAdresse.columns[0]
-        assertEquals("ADRESSE_ID", columnAdresseId.name)
-        assertEquals("RAW", columnAdresseId.oracleType)
-        assertEquals(8, columnAdresseId.size)
-        assertEquals("id", columnAdresseId.xentisType)
+    @Test
+    fun test_getTable_column_exampleId() {
+        val tableExample = service.getTable("EXAMPLE")!!
 
-        val columnIdentTxt = tableAdresse.columns[1]
+        val columnExampleId = tableExample.columns[0]
+        assertEquals("EXAMPLE_ID", columnExampleId.name)
+        assertEquals("RAW", columnExampleId.oracleType)
+        assertEquals(8, columnExampleId.size)
+        assertEquals("id", columnExampleId.xentisType)
+        assertEquals(false, columnExampleId.nullable)
+    }
+
+    @Test
+    fun test_getTable_column_identTxt() {
+        val tableExample = service.getTable("EXAMPLE")!!
+
+        val columnIdentTxt = tableExample.columns[1]
         assertEquals("IDENTEXT_TXT", columnIdentTxt.name)
         assertEquals("VARCHAR2", columnIdentTxt.oracleType)
         assertEquals(50, columnIdentTxt.size)
         assertEquals("string", columnIdentTxt.xentisType)
+        assertEquals(true, columnIdentTxt.nullable)
+    }
 
-        val columnInstitutId = tableAdresse.columns[2]
+    @Test
+    fun test_getTable_column_institutId() {
+        val tableExample = service.getTable("EXAMPLE")!!
+
+        val columnInstitutId = tableExample.columns[2]
         assertEquals("INSTITUT_ID", columnInstitutId.name)
         assertEquals("RAW", columnInstitutId.oracleType)
         assertEquals(8, columnInstitutId.size)
         assertEquals("id", columnInstitutId.xentisType)
         assertEquals("INSTITUT", columnInstitutId.foreignKey)
+        assertEquals(true, columnInstitutId.nullable)
+    }
 
-        val columnInaktivDat = tableAdresse.columns[3]
+    @Test
+    fun test_getTable_column_inaktivDat() {
+        val tableExample = service.getTable("EXAMPLE")!!
+
+        val columnInaktivDat = tableExample.columns[3]
         assertEquals("INAKTIV_DAT", columnInaktivDat.name)
         assertEquals("DATE", columnInaktivDat.oracleType)
         assertEquals(0, columnInaktivDat.size)
         assertEquals("date", columnInaktivDat.xentisType)
+        assertEquals(true, columnInaktivDat.nullable)
+    }
 
-        val columnVerknartBits = tableAdresse.columns[4]
+    @Test
+    fun test_getTable_column_verknartBits() {
+        val tableExample = service.getTable("EXAMPLE")!!
+
+        val columnVerknartBits = tableExample.columns[4]
         assertEquals("SYSVERKNART_BIT", columnVerknartBits.name)
         assertEquals("RAW", columnVerknartBits.oracleType)
         assertEquals(8, columnVerknartBits.size)
         assertEquals("bitset", columnVerknartBits.xentisType)
+        assertEquals(false, columnVerknartBits.nullable)
     }
 }
