@@ -11,7 +11,7 @@ class XentisSysCodeServiceTest {
     private val service = XentisSysCodeService()
 
     @Before
-    fun setupSysCodes() {
+    fun setup() {
         service.parseSysCodes(StringReader("""
             |16384;4000;SKAD;C_GrpSkadenz;Skadenz;Syscodegruppe Skadenz;SysPeriod;Syscode group periodicity
             |16385;4001;SKAD_SEL;C_GrpSkadenz_Selection;Skadenz;Skadenz;Period;Period
@@ -27,7 +27,7 @@ class XentisSysCodeServiceTest {
     }
 
     @Test
-    fun testSysCodes() {
+    fun test_getSysCode() {
         val syscodeSysPeriod = service.getSysCode(0x1051_0000_0000_4000L)
         assertEquals(0x1051_0000_0000_4000L, syscodeSysPeriod?.id)
         assertEquals(0x1051_0000_0000_4000L, syscodeSysPeriod?.groupId)
@@ -56,7 +56,7 @@ class XentisSysCodeServiceTest {
     }
 
     @Test
-    fun testSysSubsets() {
+    fun test_getSysCode_subsetEntries() {
         val syscodeSysPeriodGrp = service.getSysCode(0x1051_0000_0000_4000L)
         assertEquals(0, syscodeSysPeriodGrp?.subsetEntries?.size)
 
@@ -75,7 +75,7 @@ class XentisSysCodeServiceTest {
     }
 
     @Test
-    fun testFindSysCodes() {
+    fun test_findSysCodes() {
         assertEquals(
                 listOf(service.getSysCode(0x1051_0000_0400_0001L)),
                 service.findSysCodes("Taeglich"))
@@ -92,7 +92,7 @@ class XentisSysCodeServiceTest {
     }
 
     @Test
-    fun testToMessage_with_group_members() {
+    fun test_toMessage_with_group_members() {
         val actualMessage = service.toMessage(service.getSysCode(0x1051_0000_0000_4000L)!!)
         val expectedMessage = """
             |Syscode 1051000000004000 = decimal 1175720977720426496
@@ -113,7 +113,7 @@ class XentisSysCodeServiceTest {
     }
 
     @Test
-    fun testToMessage_with_subset_entries() {
+    fun test_toMessage_with_subset_entries() {
         val actualMessage = service.toMessage(service.getSysCode(0x1051_0000_0000_4001L)!!)
         val expectedMessage = """
             |Syscode 1051000000004001 = decimal 1175720977720426497
@@ -131,7 +131,7 @@ class XentisSysCodeServiceTest {
     }
 
     @Test
-    fun testTranslations() {
+    fun test_translations() {
         // Note: short translations of syscodes are not added
         // Note: all-uppercase translations are not added
         assertEquals(4, service.translations.size)
