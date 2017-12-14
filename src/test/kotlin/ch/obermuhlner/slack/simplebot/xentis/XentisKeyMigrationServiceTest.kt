@@ -1,8 +1,6 @@
 package ch.obermuhlner.slack.simplebot.xentis
 
-import ch.obermuhlner.slack.simplebot.KeyMigrationService.KeyNode
-import ch.obermuhlner.slack.simplebot.KeyMigrationService.KeyTranslation
-import ch.obermuhlner.slack.simplebot.KeyMigrationService.KeyMapping
+import ch.obermuhlner.slack.simplebot.KeyMigrationService
 import ch.obermuhlner.slack.simplebot.TranslationService
 import org.junit.Assert
 import org.junit.Assert.assertEquals
@@ -45,7 +43,7 @@ class XentisKeyMigrationServiceTest {
     fun test_getKeyNode_id_2() {
         val keyNode = service.getKeyNode(2)!!
         assertEquals(
-                KeyNode(2,
+                KeyMigrationService.KeyNode(2,
                         null,
                         "MASK",
                         null,
@@ -58,17 +56,17 @@ class XentisKeyMigrationServiceTest {
     fun test_getKeyNode_id_5() {
         val keyNode = service.getKeyNode(5)!!
         assertEquals(
-                KeyNode(5,
+                KeyMigrationService.KeyNode(5,
                         null,
                         "BUTTON_LOESCHEN",
                         null,
                         0,
                         0,
                         translations = mutableSetOf(
-                            KeyTranslation("DE", null, "-"),
-                            KeyTranslation("EN", null, "-"),
-                            KeyTranslation("DE", "TOOLTIP_TRANSLATION", "Löschen"),
-                            KeyTranslation("EN", "TOOLTIP_TRANSLATION", "Delete"))),
+                                KeyMigrationService.KeyTranslation("DE", null, "-"),
+                                KeyMigrationService.KeyTranslation("EN", null, "-"),
+                                KeyMigrationService.KeyTranslation("DE", "TOOLTIP_TRANSLATION", "Löschen"),
+                                KeyMigrationService.KeyTranslation("EN", "TOOLTIP_TRANSLATION", "Delete"))),
                 keyNode)
     }
 
@@ -76,7 +74,7 @@ class XentisKeyMigrationServiceTest {
     fun test_getKeyNode_id_1828() {
         val keyNode = service.getKeyNode(1828)!!
         assertEquals(
-                KeyNode(1828,
+                KeyMigrationService.KeyNode(1828,
                         "Component Notizen",
                         null,
                         49107,
@@ -90,16 +88,16 @@ class XentisKeyMigrationServiceTest {
     fun test_getKeyNode_id_1830() {
         val keyNode = service.getKeyNode(1830)!!
         assertEquals(
-                KeyNode(1830,
+                KeyMigrationService.KeyNode(1830,
                         "Notiz löschen",
                         null,
                         1828,
                         0,
                         5,
                         mappings = mutableSetOf(
-                                KeyMapping(1830, 5, translations = mutableSetOf(
-                                        KeyTranslation("DE", "MODEL_TRANSLATION", "Notiz löschen"),
-                                        KeyTranslation("EN", "MODEL_TRANSLATION", "Delete Notice")
+                                KeyMigrationService.KeyMapping(1830, 5, translations = mutableSetOf(
+                                        KeyMigrationService.KeyTranslation("DE", "MODEL_TRANSLATION", "Notiz löschen"),
+                                        KeyMigrationService.KeyTranslation("EN", "MODEL_TRANSLATION", "Delete Notice")
                                 ))
                         )),
                 keyNode)
