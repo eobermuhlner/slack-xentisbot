@@ -40,6 +40,18 @@ class XentisKeyMigrationServiceTest {
     }
 
     @Test
+    fun test_getKeyNode_id_null() {
+        val keyNode = service.getKeyNode(null)
+        assertEquals(null, keyNode)
+    }
+
+    @Test
+    fun test_getKeyNode_id_unknown() {
+        val keyNode = service.getKeyNode(9999)
+        assertEquals(null, keyNode)
+    }
+
+    @Test
     fun test_getKeyNode_id_2() {
         val keyNode = service.getKeyNode(2)!!
         assertEquals(
@@ -107,9 +119,53 @@ class XentisKeyMigrationServiceTest {
     fun test_translation() {
         Assert.assertEquals(
                 mutableSetOf(
-                    TranslationService.Translation("-", "-"),
-                    TranslationService.Translation("Delete", "Löschen"),
-                    TranslationService.Translation("Delete Notice", "Notiz löschen")),
+                        TranslationService.Translation("-", "-"),
+                        TranslationService.Translation("Delete", "Löschen"),
+                        TranslationService.Translation("Delete Notice", "Notiz löschen")),
                 service.translations)
+    }
+
+    @Test
+    fun test_toMessage_id_2() {
+        val keyNode = service.getKeyNode(2)!!
+        val actual = service.toMessage(keyNode)
+        val expected = """
+            |Key 2  type _MASK_
+            |    children []
+            |
+            """.trimMargin()
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun test_toMessage_id_5() {
+        val keyNode = service.getKeyNode(5)!!
+        val actual = service.toMessage(keyNode)
+        val expected = """
+                |Key 5  type _BUTTON_LOESCHEN_
+                |    children []
+                |    translation DE  : _-_
+                |    translation DE TOOLTIP_TRANSLATION : _Löschen_
+                |    translation EN  : _-_
+                |    translation EN TOOLTIP_TRANSLATION : _Delete_
+                |
+            """.trimMargin()
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun test_toMessage_id_1830() {
+        val keyNode = service.getKeyNode(1830)!!
+        val actual = service.toMessage(keyNode)
+        val expected = """
+                |Key 1830 _Notiz löschen_ is a  BUTTON_LOESCHEN
+                |    parent 1828
+                |    children []
+                |    keyMapping 1830 _Notiz löschen_ references 5  is a  BUTTON_LOESCHEN
+                |        translation DE MODEL_TRANSLATION : _Notiz löschen_
+                |        translation EN MODEL_TRANSLATION : _Delete Notice_
+                |
+            """.trimMargin()
+        assertEquals(expected, actual)
     }
 }
