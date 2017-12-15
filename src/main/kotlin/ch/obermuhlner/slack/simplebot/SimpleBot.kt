@@ -92,7 +92,7 @@ class SimpleBot(
 			}, SimpleCommandHandler("bin") { event, arg, heuristic ->
 				respondNumberConversion(event, arg.removePrefix("0b").removeSuffix("L"), 2, failMessage = !heuristic)
 			}, SimpleCommandHandler("translate") { event, arg, heuristic ->
-				respondSearchTranslations(event, arg, failMessage = !heuristic)
+				respondSearchTranslations(event, arg)
 			}
 		)
 
@@ -216,16 +216,8 @@ class SimpleBot(
 			}
 		}
 
-		var doneCounter = 0
 		for (commandHandler in commandHandlers) {
-			val done = commandHandler.execute(event, args, true)
-			if (done) {
-				doneCounter++
-			}
-		}
-
-		if (doneCounter == 0) {
-			respond(event, "Sorry, I did not understand that.")
+			commandHandler.execute(event, args, true)
 		}
 	}
 	
