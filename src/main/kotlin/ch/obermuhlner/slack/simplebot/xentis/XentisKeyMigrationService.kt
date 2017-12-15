@@ -153,7 +153,7 @@ class XentisKeyMigrationService : KeyMigrationService {
 		message += "    children ${keyNode.children}\n"
 		
 		for(translation in keyNode.translations.sortedWith(compareBy(KeyTranslation::language, KeyTranslation::type))) {
-			message += "    translation ${translation.language} ${translation.type.orEmpty()} : ${translation.text} \n"
+			message += "    translation ${translation.language} ${translation.type.orEmpty()} : _${translation.text}_\n"
 		}
 
 		for(mapping in keyNode.mappings.sortedWith(compareBy(KeyMapping::id))) {
