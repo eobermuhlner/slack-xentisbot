@@ -29,6 +29,73 @@ class SimpleBot(
 
 	private val translations = mutableSetOf<Translation>()
 
+	private val commandHandlers: List<CommandHandler> = listOf(
+			CommandHandler("help") { event, args, heuristic ->
+				if (!heuristic) {
+					respondHelp(event)
+				}
+			}, CommandHandler("refresh") { event, args, heuristic ->
+				if (!heuristic) {
+					respond(event, "Refreshing information about Xentis...")
+					loadData()
+					respondStatus(event)
+				}
+			}, CommandHandler("status") { event, args, heuristic ->
+				if (!heuristic) {
+					respondStatus(event)
+				}
+			}, SimpleCommandHandler("id") { event, arg, heuristic ->
+				val xentisId = parseXentisId(arg)
+				if (xentisId != null) {
+					respondAnalyzeXentisId(event, xentisId.first, xentisId.second, failMessage = !heuristic)
+				} else {
+					if (!heuristic) {
+						respond(event, "`$arg` is a not a valid Xentis id. It must be 16 hex digits.")
+					}
+				}
+			}, SimpleCommandHandler("syscodes") { event, arg, heuristic ->
+				if (!heuristic) {
+					respondXentisPartialSysCodeText(event, arg, failMessage = !heuristic)
+				}
+			}, SimpleCommandHandler("syscode") { event, arg, heuristic ->
+				if (!heuristic || arg.startsWith("C_")) {
+					val xentisId = parseXentisId(arg)
+					if (xentisId != null) {
+						respondXentisSysCodeId(event, xentisId.first, failMessage = !heuristic)
+					} else {
+						respondXentisSysCodeText(event, arg, failMessage = !heuristic)
+					}
+				}
+			}, SimpleCommandHandler("classpart") { event, arg, heuristic ->
+				val xentisId = parseXentisId(arg, 4)
+				if (xentisId != null) {
+					respondAnalyzeXentisClassPart(event, xentisId.second, failMessage = !heuristic)
+				} else {
+					if (!heuristic) {
+						respond(event, "`$arg` is a not a valid Xentis classpart. It must be 4 hex digits.")
+					}
+				}
+			}, SimpleCommandHandler("tables") { event, arg, heuristic ->
+				if (!heuristic || arg.isUpperCase()) {
+					respondXentisPartialTableName(event, arg, failMessage = !heuristic)
+				}
+			}, SimpleCommandHandler("table") { event, arg, heuristic ->
+				if (!heuristic || arg.isUpperCase()) {
+					respondXentisTableName(event, arg, failMessage = !heuristic)
+				}
+			}, SimpleCommandHandler("key") { event, arg, heuristic ->
+				respondXentisKey(event, arg, failMessage = !heuristic)
+			}, SimpleCommandHandler("dec") { event, arg, heuristic ->
+				respondNumberConversion(event, arg.removeSuffix("L"), 10, failMessage = !heuristic)
+			}, SimpleCommandHandler("hex") { event, arg, heuristic ->
+				respondNumberConversion(event, arg.removePrefix("0x").removeSuffix("L"), 16, failMessage = !heuristic)
+			}, SimpleCommandHandler("bin") { event, arg, heuristic ->
+				respondNumberConversion(event, arg.removePrefix("0b").removeSuffix("L"), 2, failMessage = !heuristic)
+			}, SimpleCommandHandler("translate") { event, arg, heuristic ->
+				respondSearchTranslations(event, arg, failMessage = !heuristic)
+			}
+		)
+
 	fun start () {
 		loadData()
 		
@@ -141,128 +208,25 @@ class SimpleBot(
 		println(messageContent)
 		
 		val args = messageContent.split(Pattern.compile("\\s+"))
-		
-		if (args.isEmpty() || isCommand(args, "", 0) || isCommand(args, "help", 0)) {
-			respondHelp(event)
-			return
-		}
 
-		if (isCommand(args, "refresh", 0)) {
-			loadData()
-			respondStatus(event)
-			return
-		}
-		
-		if (isCommand(args, "status", 0)) {
-			respondStatus(event)
-			return
-		}
-		
-		if (isCommand(args, "translate", 1)) {
-			respondSearchTranslations(event, args[1])
-			return
-		}
-		
-		if (isCommand(args, "id", 1)) {
-			val idText = args[1]
-			val xentisId = parseXentisId(idText)
-			if (xentisId != null) {
-				respondAnalyzeXentisId(event, xentisId.first, xentisId.second)
-			} else {
-				session.sendMessage(event.channel, "This is a not a valid Xentis id: $idText. It must be 16 hex digits.")
+		for (commandHandler in commandHandlers) {
+			val done = commandHandler.execute(event, args)
+			if (done) {
+				return
 			}
-			return
 		}
 
-		if (isCommand(args, "syscodes", 1)) {
-			respondXentisPartialSysCodeText(event, args[1])
-			return
-		}
-		
-		if (isCommand(args, "syscode", 1)) {
-			val syscodeText = args[1]
-			val xentisId = parseXentisId(syscodeText)
-			if (xentisId != null) {
-				respondXentisSysCodeId(event, xentisId.first)
-			} else {
-				respondXentisSysCodeText(event, syscodeText)
+		var doneCounter = 0
+		for (commandHandler in commandHandlers) {
+			val done = commandHandler.execute(event, args, true)
+			if (done) {
+				doneCounter++
 			}
-			return
 		}
 
-		if (isCommand(args, "classpart", 1)) {
-			val classPartText = args[1]
-			val xentisId = parseXentisId(classPartText, 4)
-			if (xentisId != null) {
-				respondAnalyzeXentisClassPart(event, xentisId.second)
-			} else {
-				session.sendMessage(event.channel, "This is a not a valid Xentis classpart: $classPartText. It must be 4 hex digits.")
-			}
-			return
+		if (doneCounter == 0) {
+			respond(event, "Sorry, I did not understand that.")
 		}
-
-		if (isCommand(args, "tables", 1)) {
-			respondXentisPartialTableName(event, args[1])
-			return
-		}
-		
-		if (isCommand(args, "table", 1)) {
-			respondXentisTableName(event, args[1])
-			return
-		}
-		
-		if (isCommand(args, "key", 1)) {
-			respondXentisKey(event, args[1])
-			return
-		}
-
-		if (isCommand(args, "dec", 1)) {
-			respondNumberConversion(event, args[1].removeSuffix("L"), 10)
-			return
-		}
-		
-		if (isCommand(args, "hex", 1)) {
-			respondNumberConversion(event, args[1].removePrefix("0x").removeSuffix("L"), 16)
-			return
-		}
-		
-		if (isCommand(args, "bin", 1)) {
-			respondNumberConversion(event, args[1].removePrefix("0b").removeSuffix("L"), 2)
-			return
-		}
-
-		// generic parsing
-				
-		val xentisId = parseXentisId(messageContent)
-		if (xentisId != null) {
-			respondAnalyzeXentisId(event, xentisId.first, xentisId.second, failMessage=false)
-			
-			respondXentisSysCodeId(event, xentisId.first, failMessage=false)
-			return
-		}
-		
-		val xentisClassPart = parseXentisId(messageContent, 4)
-		if (xentisClassPart != null) {
-			respondAnalyzeXentisClassPart(event, messageContent, failMessage=false)
-		}
-		
-		if (args[0].startsWith("0x")) {
-			respondNumberConversion(event, args[0].removePrefix("0x").removeSuffix("L"), 16)
-		} else if (args[0].startsWith("0b")) {
-			respondNumberConversion(event, args[0].removePrefix("0b").removeSuffix("L"), 2)
-		} else {
-			respondNumberConversion(event, args[0].removeSuffix("L"), 10, failMessage=false, introMessage=true)
-			respondNumberConversion(event, args[0].removePrefix("0x").removeSuffix("L"), 16, failMessage=false, introMessage=true)
-			respondNumberConversion(event, args[0].removePrefix("0b").removeSuffix("L"), 2, failMessage=false, introMessage=true)
-		}
-		
-		respondXentisSysCodeText(event, messageContent, failMessage=false)
-		respondXentisTableName(event, messageContent, failMessage=false)
-		respondSearchTranslations(event, messageContent)
-	}
-	
-	private fun isCommand(args: List<String>, command: String, argCount: Int): Boolean {
-		return args.size >= (argCount + 1) && args[0] == command
 	}
 	
 	private fun parseXentisId(text: String, length: Int = 16): Pair<Long, String>? {
@@ -290,7 +254,11 @@ class SimpleBot(
 		}
 		return null
 	}
-	
+
+	private fun respond(event: SlackMessagePosted, message: String) {
+		session.sendMessage(event.channel, message)
+	}
+
 	private fun respondHelp(event: SlackMessagePosted) {
 		val bot = "@" + user.userName
 		session.sendMessage(event.channel, """
@@ -312,7 +280,7 @@ class SimpleBot(
 				|Please try one of the following:
 				|$bot 108300000012be3c
 				|$bot 1083
-				|$bot portfolio
+				|$bot PORTFOLIO
 				|$bot interest
 				|
 				|If you talk with me in a direct chat you do not need to prefix the messages with my name $bot.
@@ -346,7 +314,7 @@ class SimpleBot(
 		
 		if (syscode == null) {
 			if (failMessage) {
-				session.sendMessage(event.channel, "This is not a valid a Xentis syscode: ${id.toString(16)}")
+				session.sendMessage(event.channel, "`${id.toString(16)}` is not a valid a Xentis syscode.")
 			}
 			return
 		}
@@ -359,7 +327,7 @@ class SimpleBot(
 		
 		if (syscodeResults.isEmpty()) {
 			if (failMessage) {
-				session.sendMessage(event.channel, "No matching Xentis syscodes found.")
+				session.sendMessage(event.channel, "No matching Xentis syscodes found for `$text`.")
 			}
 			return
 		}
@@ -379,7 +347,7 @@ class SimpleBot(
 		
 		if (syscodeResults.isEmpty()) {
 			if (failMessage) {
-				session.sendMessage(event.channel, "No matching Xentis syscodes found.")
+				session.sendMessage(event.channel, "No matching Xentis syscodes found for `$text`.")
 			}
 			return
 		}
@@ -403,10 +371,10 @@ class SimpleBot(
 		val tableName = dbSchemaService.getTableName(xentisClassPart)
 		
 		if (tableName != null) {
-			session.sendMessage(event.channel, "The classpart $xentisClassPartText indicates a Xentis table $tableName")
+			session.sendMessage(event.channel, "The classpart $xentisClassPartText indicates a Xentis table `$tableName`")
 		} else {
 			if (failMessage) {
-				session.sendMessage(event.channel, "This is not a Xentis classpart: $xentisClassPartText.")
+				session.sendMessage(event.channel, "`$xentisClassPartText` is not a Xentis classpart.")
 			}
 		}
 	}
@@ -422,10 +390,10 @@ class SimpleBot(
 		val tableId = dbSchemaService.getTableId(tableName)
 		if (tableId != null) {
 			val xentisClassPartText = (tableId or 0x1000).toString(16).padStart(4, '0')
-			session.sendMessage(event.channel, "The classpart of the Xentis table $tableName is $xentisClassPartText")
+			session.sendMessage(event.channel, "The classpart of the Xentis table `$tableName` is $xentisClassPartText")
 		} else {
 			if (failMessage) {
-				session.sendMessage(event.channel, "This is not a Xentis table: $tableName.")
+				session.sendMessage(event.channel, "`$tableName` is not a Xentis table.")
 			}
 		}
 	}
@@ -435,7 +403,7 @@ class SimpleBot(
 		
 		if (tableNames.isEmpty()) {
 			if (failMessage) {
-				session.sendMessage(event.channel, "_No matching tables found._")
+				session.sendMessage(event.channel, "No matching tables found.")
 			}
 			return
 		}
@@ -453,7 +421,7 @@ class SimpleBot(
 		val id = text.toIntOrNull()
 		if (id == null) {
 			if (failMessage) {
-				session.sendMessage(event.channel, "Not a valid Xentis key id (must be an integer value): $text")
+				session.sendMessage(event.channel, "`$text` is not a valid Xentis key id (must be an integer value).")
 			}
 			return
 		}
@@ -461,7 +429,7 @@ class SimpleBot(
 		val keyNode = keyMigrationService.getKeyNode(id)
 		if (keyNode == null) {
 			if (failMessage) {
-				session.sendMessage(event.channel, "No Xentis key node found for id: $id")
+				session.sendMessage(event.channel, "No Xentis key node found for id $id.")
 			}
 			return
 		}
@@ -474,13 +442,13 @@ class SimpleBot(
 		
 		if (value == null) {
 			if (failMessage) {
-				session.sendMessage(event.channel, "Not a valid number for base $base: $text")			
+				session.sendMessage(event.channel, "`$text` is not a valid number for base `$base`.")
 			}
 			return
 		}
 		
 		if (introMessage) {
-			session.sendMessage(event.channel, "Interpreting as number with base $base:")
+			session.sendMessage(event.channel, "Interpreting `$text` as number with base `$base`:")
 		}
  
 		session.sendMessage(event.channel, """
@@ -534,8 +502,11 @@ class SimpleBot(
 			})
 		} else {
 			message = "No translations found."
+			if (!failMessage) {
+				return
+			}
 		}
-		
+
 		session.sendMessage(event.channel, message)
 	}
 	
@@ -568,6 +539,15 @@ fun plural(count: Int, singular: String, plural: String): String {
 	} else {
 		return plural
 	}
+}
+
+fun String.isUpperCase(): Boolean {
+	for (c in this) {
+		if (!c.isUpperCase()) {
+			return false
+		}
+	}
+	return true
 }
 
 fun SlackUser.tag() = "<@" + this.id + ">" 
