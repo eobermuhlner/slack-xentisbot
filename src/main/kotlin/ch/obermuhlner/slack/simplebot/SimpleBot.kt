@@ -86,11 +86,32 @@ class SimpleBot(
 			}, SimpleCommandHandler("key") { event, arg, heuristic ->
 				respondXentisKey(event, arg, failMessage = !heuristic)
 			}, SimpleCommandHandler("dec") { event, arg, heuristic ->
-				respondNumberConversion(event, arg.removeSuffix("L"), 10, failMessage = !heuristic)
+				if (!heuristic) {
+					respondNumberConversion(event, arg.removeSuffix("L"), 10)
+				}
 			}, SimpleCommandHandler("hex") { event, arg, heuristic ->
-				respondNumberConversion(event, arg.removePrefix("0x").removeSuffix("L"), 16, failMessage = !heuristic)
+				if (!heuristic) {
+					respondNumberConversion(event, arg.removePrefix("0x").removeSuffix("L"), 16)
+				}
 			}, SimpleCommandHandler("bin") { event, arg, heuristic ->
-				respondNumberConversion(event, arg.removePrefix("0b").removeSuffix("L"), 2, failMessage = !heuristic)
+				if (!heuristic) {
+					respondNumberConversion(event, arg.removePrefix("0b").removeSuffix("L"), 2)
+				}
+			}, SimpleCommandHandler("number") { event, arg, heuristic ->
+				if (arg.startsWith("0x")) {
+					respondNumberConversion(event, arg.removePrefix("0x").removeSuffix("L"), 16, failMessage = !heuristic)
+				} else if (arg.startsWith("-0x")) {
+					respondNumberConversion(event, "-" + arg.removePrefix("-0x").removeSuffix("L"), 16, failMessage = !heuristic)
+
+				} else if (arg.startsWith("0b")) {
+					respondNumberConversion(event, arg.removePrefix("0b").removeSuffix("L"), 2, failMessage = !heuristic)
+				} else if (arg.startsWith("-0b")) {
+					respondNumberConversion(event, "-" + arg.removePrefix("-0b").removeSuffix("L"), 2, failMessage = !heuristic)
+				} else {
+					respondNumberConversion(event, arg.removeSuffix("L"), 10, failMessage = !heuristic)
+					respondNumberConversion(event, arg.removeSuffix("L"), 16, failMessage = !heuristic)
+					respondNumberConversion(event, arg.removeSuffix("L"), 2, failMessage = !heuristic)
+				}
 			}, SimpleCommandHandler("translate") { event, arg, heuristic ->
 				respondSearchTranslations(event, arg)
 			}
@@ -431,7 +452,7 @@ class SimpleBot(
 	
 	private fun respondNumberConversion(event: SlackMessagePosted, text: String, base: Int, failMessage: Boolean=true, introMessage: Boolean=true) {
 		val value = text.toLongOrNull(base)
-		
+
 		if (value == null) {
 			if (failMessage) {
 				session.sendMessage(event.channel, "`$text` is not a valid number for base `$base`.")
@@ -442,12 +463,23 @@ class SimpleBot(
 		if (introMessage) {
 			session.sendMessage(event.channel, "Interpreting `$text` as number with base `$base`:")
 		}
- 
-		session.sendMessage(event.channel, """
-				|Dec: ${value}
-				|Hex: ${value.toString(16)}
-				|Bin: ${value.toString(2)}
+
+		if (value < 0) {
+			session.sendMessage(event.channel, """
+				|Dec (unsigned): `${java.lang.Long.toUnsignedString(value, 10)}`
+				|Hex (unsigned): `${java.lang.Long.toUnsignedString(value, 16)}`
+				|Bin (unsigned): `${java.lang.Long.toUnsignedString(value, 2)}`
+				|Dec (signed): `${value.toString(10)}`
+				|Hex (signed): `${value.toString(16)}`
+				|Bin (signed): `${value.toString(2)}`
 				""".trimMargin())
+		} else {
+			session.sendMessage(event.channel, """
+				|Dec: `${java.lang.Long.toUnsignedString(value, 10)}`
+				|Hex: `${java.lang.Long.toUnsignedString(value, 16)}`
+				|Bin: `${java.lang.Long.toUnsignedString(value, 2)}`
+				""".trimMargin())
+		}
 	}
 		
 	private fun respondSearchTranslations(event: SlackMessagePosted, text: String, failMessage: Boolean=true) {
