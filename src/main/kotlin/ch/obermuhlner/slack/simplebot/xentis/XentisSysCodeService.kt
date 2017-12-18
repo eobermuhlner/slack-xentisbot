@@ -82,29 +82,31 @@ class XentisSysCodeService : SysCodeService {
 	}
 
 	override fun parseDbSchema(dbSchemaService: DbSchemaService) {
-		val name = "GrpDBTables"
+		val groupCode = "DBTables"
 		val groupSyscode = SysCode(
 				SYSCODE_BASE_VALUE,
 				SYSCODE_BASE_VALUE,
-				"DBTables",
-				"C_" + name,
-				name,
-				name,
-				name,
-				name)
+                groupCode,
+				"C_Grp" + groupCode,
+                groupCode,
+                groupCode,
+                groupCode,
+                groupCode)
 		addSysCode(groupSyscode)
 
 		for (table in dbSchemaService.tables) {
-			val code = table.id.toString().padStart(4, '0')
+			val code = (table.id + 0x1000).toString(16)
+			val shortName = table.id.toString().padStart(4, '0')
+			val name = table.name.toLowerCase().capitalize()
 			val syscode = SysCode(
 					table.id + SYSCODE_BASE_VALUE,
 					SYSCODE_BASE_VALUE,
-					table.name,
-					"C_" + table.name.capitalize(),
 					code,
-					code,
-					table.name,
-					table.name)
+					"C_" + name,
+					shortName,
+					name,
+					shortName,
+					name)
 			groupSyscode.children.add(syscode.id)
 			addSysCode(syscode)
 		}
