@@ -58,8 +58,8 @@ class SimpleBot(
 					respondXentisPartialSysCodeText(event, arg, failMessage = !heuristic)
 				}
 			}, SimpleCommandHandler("syscode") { event, arg, heuristic ->
-				if (!heuristic || arg.startsWith("C_")) {
-					val xentisId = parseXentisId(arg)
+				val xentisId = parseXentisId(arg)
+				if (!heuristic || xentisId != null || arg.startsWith("C_")) {
 					if (xentisId != null) {
 						respondXentisSysCodeId(event, xentisId.first, failMessage = !heuristic)
 					} else {
