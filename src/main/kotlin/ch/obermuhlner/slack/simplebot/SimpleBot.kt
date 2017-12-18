@@ -153,6 +153,7 @@ class SimpleBot(
 			sysCodeService.parseSysCodes(FileReader(xentisSysCodeFileName))
             sysCodeService.parseSysSubsets(FileReader(xentisSysSubsetFileName))
 		}
+        sysCodeService.parseDbSchema(dbSchemaService)
 		
 		loadPropertiesTranslations(properties)
 		translations.addAll(propertiesTranslations.translations)

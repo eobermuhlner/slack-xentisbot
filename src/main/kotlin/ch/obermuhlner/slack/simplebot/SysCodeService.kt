@@ -6,6 +6,7 @@ interface SysCodeService : TranslationService {
 
     fun parseSysCodes(sysCodeReader: Reader)
     fun parseSysSubsets(sysSubsetReader: Reader)
+    fun parseDbSchema(dbSchemaService: DbSchemaService)
 
     fun getSysCode(id: Long): SysCodeService.SysCode?
 

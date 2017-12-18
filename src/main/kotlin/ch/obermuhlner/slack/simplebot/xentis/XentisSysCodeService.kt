@@ -1,5 +1,6 @@
 package ch.obermuhlner.slack.simplebot.xentis
 
+import ch.obermuhlner.slack.simplebot.DbSchemaService
 import ch.obermuhlner.slack.simplebot.SysCodeService
 import ch.obermuhlner.slack.simplebot.SysCodeService.SysCode
 import ch.obermuhlner.slack.simplebot.SysCodeService.SysSubsetEntry
@@ -10,6 +11,8 @@ import java.io.BufferedReader
 import java.io.Reader
 
 class XentisSysCodeService : SysCodeService {
+
+	private val SYSCODE_BASE_VALUE = 0x1051_0000_0000_0000L
 
     private val idToSysCode = mutableMapOf<Long, SysCode?>()
     private val nameToSysCode = mutableMapOf<String, SysCode?>()
@@ -25,7 +28,7 @@ class XentisSysCodeService : SysCodeService {
             var groupId = 0L
             for (line in it.readLines()) {
                 val fields = line.split(";")
-                val id = fields[0].toLong() + 0x1051_0000_0000_0000L
+                val id = fields[0].toLong() + SYSCODE_BASE_VALUE
                 if (isGroupId(id, lastId)) {
                     groupId = id
                 }
@@ -39,8 +42,7 @@ class XentisSysCodeService : SysCodeService {
                         germanMedium = fields[5],
                         englishShort = fields[6],
                         englishMedium = fields[7])
-                idToSysCode[id] = syscode
-                nameToSysCode[syscode.name] = syscode
+                addSysCode(syscode)
 
                 val groupSyscode = idToSysCode[groupId]
                 if (groupSyscode != null) {
@@ -51,7 +53,12 @@ class XentisSysCodeService : SysCodeService {
         }
     }
 
-    override fun parseSysSubsets(sysSubsetReader: Reader) {
+	private fun addSysCode(syscode: SysCodeService.SysCode) {
+		idToSysCode[syscode.id] = syscode
+		nameToSysCode[syscode.name] = syscode
+	}
+
+	override fun parseSysSubsets(sysSubsetReader: Reader) {
 		BufferedReader(sysSubsetReader).use {
 			for(line in it.readLines()) {
 				val fields = line.split(";")
@@ -71,6 +78,35 @@ class XentisSysCodeService : SysCodeService {
 					subsetSyscode.subsetEntries.add(subsetEntry)
 				}
 			}			
+		}
+	}
+
+	override fun parseDbSchema(dbSchemaService: DbSchemaService) {
+		val name = "GrpDBTables"
+		val groupSyscode = SysCode(
+				SYSCODE_BASE_VALUE,
+				SYSCODE_BASE_VALUE,
+				"DBTables",
+				"C_" + name,
+				name,
+				name,
+				name,
+				name)
+		addSysCode(groupSyscode)
+
+		for (table in dbSchemaService.tables) {
+			val code = table.id.toString().padStart(4, '0')
+			val syscode = SysCode(
+					table.id + SYSCODE_BASE_VALUE,
+					SYSCODE_BASE_VALUE,
+					table.name,
+					"C_" + table.name.capitalize(),
+					code,
+					code,
+					table.name,
+					table.name)
+			groupSyscode.children.add(syscode.id)
+			addSysCode(syscode)
 		}
 	}
 	

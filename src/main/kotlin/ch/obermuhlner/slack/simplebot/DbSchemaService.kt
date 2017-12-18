@@ -4,6 +4,8 @@ import java.io.Reader
 
 interface DbSchemaService {
 
+    val tables: List<DbTable>
+
     fun parse(schemaReader: Reader)
 
     fun getTableNames(partialTableName: String): List<String>

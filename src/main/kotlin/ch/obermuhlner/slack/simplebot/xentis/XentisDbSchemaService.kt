@@ -11,10 +11,14 @@ import java.io.Reader
 
 class XentisDbSchemaService : DbSchemaService {
 
+	private val _tables = mutableListOf<DbTable>()
 	private val tableNameToTable = mutableMapOf<String, DbTable?>()
 	private val tableIdToTable = mutableMapOf<Long, DbTable?>()
-		
+
+	override val tables: List<DbTable> get() = _tables
+
 	override fun parse(schemaReader: Reader) {
+		_tables.clear()
 		tableNameToTable.clear()
 		tableIdToTable.clear()
 		
@@ -31,6 +35,7 @@ class XentisDbSchemaService : DbSchemaService {
 				when (qName) {
 					"Table" -> {
 						table = DbTable(attributes.getValue("name"), parseLong(attributes.getValue("id")), attributes.getValue("alias"), attributes.getValue("codeTabGroup"))
+						_tables.add(table)
 						tableNameToTable[table.name] = table
 						tableIdToTable[table.id] = table
 					}
