@@ -14,7 +14,7 @@ class XentisDbSchemaServiceTest {
         service = XentisDbSchemaService()
 
         service.parse(StringReader("""
-            | <Table name="EXAMPLE" id="0002" type="General" blockSize="10" cachingStrategy="KeepRecent" codeTabGroup="Valor" alias="Example">
+            | <Table name="EXAMPLE" id="0002" type="General" blockSize="10" cachingStrategy="KeepRecent" codeTabGroup="Valor" alias="Beispiel">
             |      <Columns>
             |        <Column name="EXAMPLE_ID" nullable="false">
             |          <Format oracle="RAW" size="8" xentis="id"/>
@@ -68,7 +68,7 @@ class XentisDbSchemaServiceTest {
         assertEquals(2L, tableExample!!.id)
         assertEquals("EXAMPLE", tableExample.name)
         assertEquals(5, tableExample.columns.size)
-        assertEquals("Example", tableExample.alias)
+        assertEquals("Beispiel", tableExample.alias)
         assertEquals("Valor", tableExample.codeTabGroup)
     }
 
@@ -138,7 +138,7 @@ class XentisDbSchemaServiceTest {
         val tableExample = service.getTable("EXAMPLE")!!
 
         val expected = """
-            |TABLE EXAMPLE
+            |TABLE EXAMPLE ALIAS Beispiel CODETABGROUP Valor
             |    EXAMPLE_ID                     : RAW[8]          (id)
             |    IDENTEXT_TXT                   : VARCHAR2[50]    (string)
             |    INSTITUT_ID                    : RAW[8]          (id) => INSTITUT

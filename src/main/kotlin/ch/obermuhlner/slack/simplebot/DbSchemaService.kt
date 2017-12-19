@@ -24,7 +24,14 @@ interface DbSchemaService {
             val columns: MutableList<DbColumn> = mutableListOf()) {
 
         fun toMessage(): String {
-            var message = "TABLE $name\n"
+            var message = "TABLE $name"
+            if (alias != null) {
+                message += " ALIAS $alias"
+            }
+            if (codeTabGroup != null) {
+                message += " CODETABGROUP $codeTabGroup"
+            }
+            message += "\n"
 
             for(column in columns) {
                 val sizeText = if (column.size == 0) "" else "[${column.size}]"
