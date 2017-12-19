@@ -97,7 +97,7 @@ class XentisSysCodeService : SysCodeService {
 		for (table in dbSchemaService.tables) {
 			val code = (table.id + 0x1000).toString(16)
 			val shortName = table.id.toString().padStart(4, '0')
-			val name = table.name.toLowerCase().capitalize()
+			val name = table.alias ?: table.name.toLowerCase().capitalize()
 			val syscode = SysCode(
 					table.id + SYSCODE_BASE_VALUE,
 					SYSCODE_BASE_VALUE,
