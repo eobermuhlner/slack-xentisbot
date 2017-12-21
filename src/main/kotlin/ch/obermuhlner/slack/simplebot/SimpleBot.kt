@@ -87,26 +87,34 @@ class SimpleBot(
 				respondXentisKey(event, arg, failMessage = !heuristic)
 			}, SimpleCommandHandler("dec") { event, arg, heuristic ->
 				if (!heuristic) {
-					respondNumberConversion(event, arg.removeSuffix("L"), 10)
+					respondNumberConversion(event, arg.removeSuffix("L"), 10, introMessage = false)
 				}
 			}, SimpleCommandHandler("hex") { event, arg, heuristic ->
 				if (!heuristic) {
-					respondNumberConversion(event, arg.removePrefix("0x").removeSuffix("L"), 16)
+					if (arg.startsWith("-0x")) {
+						respondNumberConversion(event, "-" + arg.removePrefix("-0x").removeSuffix("L"), 16, introMessage = false)
+					} else {
+						respondNumberConversion(event, arg.removePrefix("0x").removeSuffix("L"), 16, introMessage = false)
+					}
 				}
 			}, SimpleCommandHandler("bin") { event, arg, heuristic ->
 				if (!heuristic) {
-					respondNumberConversion(event, arg.removePrefix("0b").removeSuffix("L"), 2)
+					if (arg.startsWith("-0b")) {
+						respondNumberConversion(event, "-" + arg.removePrefix("-0b").removeSuffix("L"), 2, introMessage = false)
+					} else {
+						respondNumberConversion(event, arg.removePrefix("0b").removeSuffix("L"), 2, introMessage = false)
+					}
 				}
 			}, SimpleCommandHandler("number") { event, arg, heuristic ->
 				if (arg.startsWith("0x")) {
-					respondNumberConversion(event, arg.removePrefix("0x").removeSuffix("L"), 16, failMessage = !heuristic)
+					respondNumberConversion(event, arg.removePrefix("0x").removeSuffix("L"), 16, failMessage = !heuristic, introMessage = false)
 				} else if (arg.startsWith("-0x")) {
-					respondNumberConversion(event, "-" + arg.removePrefix("-0x").removeSuffix("L"), 16, failMessage = !heuristic)
+					respondNumberConversion(event, "-" + arg.removePrefix("-0x").removeSuffix("L"), 16, failMessage = !heuristic, introMessage = false)
 
 				} else if (arg.startsWith("0b")) {
-					respondNumberConversion(event, arg.removePrefix("0b").removeSuffix("L"), 2, failMessage = !heuristic)
+					respondNumberConversion(event, arg.removePrefix("0b").removeSuffix("L"), 2, failMessage = !heuristic, introMessage = false)
 				} else if (arg.startsWith("-0b")) {
-					respondNumberConversion(event, "-" + arg.removePrefix("-0b").removeSuffix("L"), 2, failMessage = !heuristic)
+					respondNumberConversion(event, "-" + arg.removePrefix("-0b").removeSuffix("L"), 2, failMessage = !heuristic, introMessage = false)
 				} else {
 					respondNumberConversion(event, arg.removeSuffix("L"), 10, failMessage = !heuristic)
 					respondNumberConversion(event, arg.removeSuffix("L"), 16, failMessage = !heuristic)
