@@ -30,17 +30,17 @@ class SimpleBot(
 	private val translations = mutableSetOf<Translation>()
 
 	private val commandHandlers: List<CommandHandler> = listOf(
-			CommandHandler("help") { event, args, heuristic ->
+			CommandHandler("help") { event, _, heuristic ->
 				if (!heuristic) {
 					respondHelp(event)
 				}
-			}, CommandHandler("refresh") { event, args, heuristic ->
+			}, CommandHandler("refresh") { event, _, heuristic ->
 				if (!heuristic) {
 					respond(event, "Refreshing information about Xentis...")
 					loadData()
 					respondStatus(event)
 				}
-			}, CommandHandler("status") { event, args, heuristic ->
+			}, CommandHandler("status") { event, _, heuristic ->
 				if (!heuristic) {
 					respondStatus(event)
 				}
@@ -120,7 +120,7 @@ class SimpleBot(
 					respondNumberConversion(event, arg.removeSuffix("L"), 16, failMessage = !heuristic)
 					respondNumberConversion(event, arg.removeSuffix("L"), 2, failMessage = !heuristic)
 				}
-			}, SimpleCommandHandler("translate") { event, arg, heuristic ->
+			}, SimpleCommandHandler("translate") { event, arg, _ ->
 				respondSearchTranslations(event, arg)
 			}
 		)
@@ -214,7 +214,7 @@ class SimpleBot(
 		}
 	}
 		
-	fun loadPropertiesTranslations(properties: Properties) {
+	private fun loadPropertiesTranslations(properties: Properties) {
 		propertiesTranslations.clear()
 
 		var translationIndex = 0
@@ -234,7 +234,7 @@ class SimpleBot(
 		} while (success)
 	}
 	
-	fun respondToMessage(event: SlackMessagePosted , messageContent: String) {
+	private fun respondToMessage(event: SlackMessagePosted , messageContent: String) {
 		println(messageContent)
 		
 		val args = messageContent.split(Pattern.compile("\\s+"))
