@@ -175,6 +175,7 @@ class SimpleBot(
 
 	private val explicitCommandCount : MutableMap<String, Int> = mutableMapOf()
 	private val heuristicCommandCount : MutableMap<String, Int> = mutableMapOf()
+	private val userCommandCount : MutableMap<String, Int> = mutableMapOf()
 
 	fun start () {
 		loadData()
@@ -288,33 +289,35 @@ class SimpleBot(
 	private fun respondToMessage(event: SlackMessagePosted , messageContent: String) {
 		println(messageContent)
 
+		incrementUserCommandCount(event.user.realName)
+
 		val args = messageContent.split(Pattern.compile("\\s+"))
 
 		for (commandHandler in commandHandlers) {
-			println("Attempt explicit execution of ${commandHandler.name}")
 			val done = commandHandler.execute(event, args)
 			if (done) {
-				println("Success explicit execution of ${commandHandler.name}")
 				incrementCommandCount(commandHandler, false)
 				return
 			}
 		}
 
 		for (commandHandler in commandHandlers) {
-			println("Attempt heuristic execution of ${commandHandler.name}")
 			val done = commandHandler.execute(event, args, true)
 			if (done) {
-				println("Success heuristic execution of ${commandHandler.name}")
 				incrementCommandCount(commandHandler, true)
 			}
 		}
 	}
 
+	private fun incrementUserCommandCount(userName : String) {
+		userCommandCount[userName] = userCommandCount.getOrDefault(userName, 0) + 1
+	}
+
 	private fun incrementCommandCount(commandHandler: CommandHandler, heuristic: Boolean) {
 		if (heuristic) {
-			heuristicCommandCount[commandHandler.name] = heuristicCommandCount.computeIfAbsent(commandHandler.name, { 0 }) + 1
+			heuristicCommandCount[commandHandler.name] = heuristicCommandCount.getOrDefault(commandHandler.name, 0) + 1
 		} else {
-			explicitCommandCount[commandHandler.name] = explicitCommandCount.computeIfAbsent(commandHandler.name, { 0 }) + 1
+			explicitCommandCount[commandHandler.name] = explicitCommandCount.getOrDefault(commandHandler.name, 0) + 1
 		}
 	}
 
@@ -412,6 +415,11 @@ class SimpleBot(
 		message += "Heuristic commands:\n"
 		for (command in heuristicCommandCount.keys.sorted()) {
 			message += "    $command : ${heuristicCommandCount[command]}\n"
+		}
+
+		message += "User commands:\n"
+		for (userName in userCommandCount.keys.sorted()) {
+			message += "    $userName : ${userCommandCount[userName]}\n"
 		}
 
 		session.sendMessage(event.channel, message)
