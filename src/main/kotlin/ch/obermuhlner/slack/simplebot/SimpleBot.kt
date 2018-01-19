@@ -30,6 +30,11 @@ class SimpleBot(
 
 	private val translations = mutableSetOf<Translation>()
 
+	private val startMilliseconds = System.currentTimeMillis()
+	private val explicitCommandCount : MutableMap<String, Int> = mutableMapOf()
+	private val heuristicCommandCount : MutableMap<String, Int> = mutableMapOf()
+	private val userCommandCount : MutableMap<String, Int> = mutableMapOf()
+
 	private val commandHandlers: List<CommandHandler> = listOf(
 			CommandHandler("help") { event, _, heuristic ->
 				if (!heuristic) {
@@ -173,10 +178,6 @@ class SimpleBot(
 			}
 		)
 
-	private val explicitCommandCount : MutableMap<String, Int> = mutableMapOf()
-	private val heuristicCommandCount : MutableMap<String, Int> = mutableMapOf()
-	private val userCommandCount : MutableMap<String, Int> = mutableMapOf()
-
 	fun start () {
 		loadData()
 
@@ -289,23 +290,25 @@ class SimpleBot(
 	private fun respondToMessage(event: SlackMessagePosted , messageContent: String) {
 		println(messageContent)
 
-		incrementUserCommandCount(event.user.realName)
-
 		val args = messageContent.split(Pattern.compile("\\s+"))
 
-		for (commandHandler in commandHandlers) {
-			val done = commandHandler.execute(event, args)
-			if (done) {
-				incrementCommandCount(commandHandler, false)
-				return
+		try {
+			for (commandHandler in commandHandlers) {
+				val done = commandHandler.execute(event, args)
+				if (done) {
+					incrementCommandCount(commandHandler, false)
+					return
+				}
 			}
-		}
 
-		for (commandHandler in commandHandlers) {
-			val done = commandHandler.execute(event, args, true)
-			if (done) {
-				incrementCommandCount(commandHandler, true)
+			for (commandHandler in commandHandlers) {
+				val done = commandHandler.execute(event, args, true)
+				if (done) {
+					incrementCommandCount(commandHandler, true)
+				}
 			}
+		} finally {
+			incrementUserCommandCount(event.user.realName)
 		}
 	}
 
@@ -406,8 +409,21 @@ class SimpleBot(
 					""".trimMargin())
 	}
 
+	private val millisecondsPerSecond = 1000
+	private val millisecondsPerMinute = 60 * millisecondsPerSecond
+	private val millisecondsPerHour = 60 * millisecondsPerMinute
+	private val millisecondsPerDay = 24 * millisecondsPerHour
+
 	private fun respondStatistics(event: SlackMessagePosted) {
-		var message = "Explicit commands:\n"
+		val daysHoursMinutesSecondsMilliseconds = convertMillisecondsToDaysHoursMinutesSecondsMilliseconds(System.currentTimeMillis() - startMilliseconds)
+		val runningDays = daysHoursMinutesSecondsMilliseconds[0]
+		val runningHours = daysHoursMinutesSecondsMilliseconds[1]
+		val runningMinutes = daysHoursMinutesSecondsMilliseconds[2]
+		val runningSeconds = daysHoursMinutesSecondsMilliseconds[3]
+
+		var message = "This bot is running since $runningDays days $runningHours hours $runningMinutes minutes $runningSeconds seconds.\n"
+
+		message += "Explicit commands:\n"
 		for (command in explicitCommandCount.keys.sorted()) {
 			message += "    $command : ${explicitCommandCount[command]}\n"
 		}
@@ -423,6 +439,24 @@ class SimpleBot(
 		}
 
 		session.sendMessage(event.channel, message)
+	}
+
+	private fun convertMillisecondsToDaysHoursMinutesSecondsMilliseconds(milliseconds: Long): List<Long> {
+		var remainingMilliseconds = milliseconds
+		val days = remainingMilliseconds / millisecondsPerDay
+
+		remainingMilliseconds -= days * millisecondsPerDay
+		val hours = remainingMilliseconds / millisecondsPerHour
+
+		remainingMilliseconds -= hours * millisecondsPerHour
+		val minutes = remainingMilliseconds / millisecondsPerMinute
+
+		remainingMilliseconds -= minutes * millisecondsPerMinute
+		val seconds = remainingMilliseconds / millisecondsPerSecond
+
+		remainingMilliseconds -= seconds * millisecondsPerSecond
+
+		return listOf(days, hours, minutes, seconds, remainingMilliseconds)
 	}
 
 	private fun respondAnalyzeXentisId(event: SlackMessagePosted, id: Long, text: String, failMessage: Boolean=true): Boolean {
