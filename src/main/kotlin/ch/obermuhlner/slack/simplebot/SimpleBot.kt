@@ -9,8 +9,10 @@ import com.ullink.slack.simpleslackapi.SlackUser
 import com.google.gson.GsonBuilder
 import com.google.gson.FieldNamingPolicy
 import com.ullink.slack.simpleslackapi.SlackAttachment
+import com.ullink.slack.simpleslackapi.SlackChannel
 import com.ullink.slack.simpleslackapi.SlackSession
 import com.ullink.slack.simpleslackapi.events.SlackMessagePosted
+import com.ullink.slack.simpleslackapi.impl.ChannelHistoryModuleFactory
 import java.io.BufferedReader
 import java.util.regex.Pattern
 import java.io.PrintWriter
@@ -62,6 +64,13 @@ class SimpleBot(
 			}, CommandHandler("statistics") { event, _, heuristic ->
 				if (!heuristic) {
 					respondStatistics(event)
+					true
+				} else {
+					false
+				}
+			}, CommandHandler("delete-all-messages") { event, _, heuristic ->
+				if (!heuristic) {
+					deleteAllMessages(event.channel)
 					true
 				} else {
 					false
@@ -177,6 +186,16 @@ class SimpleBot(
                respondSearchTranslations(event, arg)
 			}
 		)
+
+	private fun deleteAllMessages(channel: SlackChannel) {
+		val channelHistory = ChannelHistoryModuleFactory.createChannelHistoryModule(session)
+		val messages = channelHistory.fetchHistoryOfChannel(channel.name)
+		println("Found ${messages.size} messages in the history - deleting them")
+		for (message in messages) {
+			session.deleteMessage(message.timestamp, channel)
+		}
+		println("Finished deleting")
+	}
 
 	fun start () {
 		loadData()
