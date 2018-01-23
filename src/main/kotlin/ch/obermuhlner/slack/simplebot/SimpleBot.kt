@@ -19,12 +19,15 @@ import java.io.PrintWriter
 import java.io.StringWriter
 import java.time.*
 import java.time.format.DateTimeParseException
+import com.jcabi.ssh.Shell
+import com.jcabi.ssh.SshByPassword
 
 class SimpleBot(
 		private val sysCodeService: SysCodeService = XentisSysCodeService(),
 		private val propertiesTranslations: PropertiesTranslationService = XentisPropertiesTranslationService(),
 		private val dbSchemaService: DbSchemaService = XentisDbSchemaService(),
-		private val keyMigrationService: KeyMigrationService = XentisKeyMigrationService()) {
+		private val keyMigrationService: KeyMigrationService = XentisKeyMigrationService(),
+		private var xentisServerHostnames: List<String> = listOf()) {
 
 	private lateinit var session: SlackSession
 	private lateinit var user: SlackUser
@@ -228,11 +231,18 @@ class SimpleBot(
                 } else {
 					false
 				}
-            }, SimpleCommandHandler("image") { event, arg, heuristic ->
-                if (!heuristic) {
-                    respond(event, "Image $arg", imageUrl = arg)
+			}, SimpleCommandHandler("image") { event, arg, heuristic ->
+				if (!heuristic) {
+					respond(event, "Image $arg", imageUrl = arg)
 					true
-                } else {
+				} else {
+					false
+				}
+			}, SimpleCommandHandler("xentis") { event, arg, heuristic ->
+				if (!heuristic) {
+					respondXentisServerStatus(event, arg)
+					true
+				} else {
 					false
 				}
             }, SimpleCommandHandler("translate") { event, arg, _ ->
@@ -268,6 +278,7 @@ class SimpleBot(
 
 		user = session.user()
 		adminUser = findUser(properties.getProperty("admin.user"))
+		xentisServerHostnames = properties.getProperty("xentis.hosts").split(",").map {it.trim()}
 
 		val xentisSchemaFileName = properties.getProperty("xentis.schema")
 		if (xentisSchemaFileName != null) {
@@ -707,6 +718,32 @@ class SimpleBot(
 				""".trimMargin())
 		}
 		return true
+	}
+
+	private fun respondXentisServerStatus(event: SlackMessagePosted, arg: String): Boolean {
+		var success = false
+		for (hostname in xentisServerHostnames) {
+			try {
+				val shell = SshByPassword(hostname, 22, arg, arg)
+				val response = Shell.Plain(shell).exec("source .profile; xentis/admin/bin/xentis stat")
+				respond(event, """
+    				|User `$arg` on host `$hostname` responded with:
+    				|```$response```""".trimMargin())
+				success = true
+			} catch (ex: Exception) {
+				if (ex.message == "com.jcraft.jsch.JSchException: Auth cancel") {
+					// ignore
+				} else {
+					respond(event, "User `$arg` on host `$hostname` failed with ${ex.message}")
+				}
+			}
+		}
+
+		if (!success) {
+			respond(event, "No user `$arg` found on any of the hosts ${xentisServerHostnames.joinToString(", ", "`", "`")}.")
+		}
+
+		return success
 	}
 
 	private fun respondSearchTranslations(event: SlackMessagePosted, text: String, failMessage: Boolean=true): Boolean {

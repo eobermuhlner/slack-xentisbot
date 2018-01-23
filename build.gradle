@@ -9,6 +9,7 @@ buildscript {
     ext.slackapi_version = '1.2.0'
     ext.perforceapi_version = '2017.2.1595481'
     ext.slf4j_version = '1.7.25'
+    ext.jcabissh_version = '1.6'
 
     repositories {
         mavenCentral()
@@ -28,7 +29,8 @@ dependencies {
             "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version",
             "com.ullink.slack:simpleslackapi:$slackapi_version",
             "com.perforce:p4java:$perforceapi_version",
-            "org.slf4j:slf4j-simple:$slf4j_version"
+            "org.slf4j:slf4j-simple:$slf4j_version",
+            "com.jcabi:jcabi-ssh:$jcabissh_version"
     )
     
     testCompile 'junit:junit:4.12'
