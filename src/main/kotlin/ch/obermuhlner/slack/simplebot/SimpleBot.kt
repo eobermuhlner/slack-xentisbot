@@ -17,6 +17,8 @@ import java.io.BufferedReader
 import java.util.regex.Pattern
 import java.io.PrintWriter
 import java.io.StringWriter
+import java.time.*
+import java.time.format.DateTimeParseException
 
 class SimpleBot(
 		private val sysCodeService: SysCodeService = XentisSysCodeService(),
@@ -162,12 +164,63 @@ class SimpleBot(
 				} else if (arg.startsWith("-0b")) {
 					respondNumberConversion(event, "-" + arg.removePrefix("-0b").removeSuffix("L"), 2, failMessage = !heuristic, introMessage = false)
 				} else {
-					var result = false
-					result = result or respondNumberConversion(event, arg.removeSuffix("L"), 10, failMessage = !heuristic)
-					result = result or respondNumberConversion(event, arg.removeSuffix("L"), 16, failMessage = !heuristic)
-					result = result or respondNumberConversion(event, arg.removeSuffix("L"), 2, failMessage = !heuristic)
-					result
+					var success = false
+					success = success or respondNumberConversion(event, arg.removeSuffix("L"), 10, failMessage = !heuristic)
+					success = success or respondNumberConversion(event, arg.removeSuffix("L"), 16, failMessage = !heuristic)
+					success = success or respondNumberConversion(event, arg.removeSuffix("L"), 2, failMessage = !heuristic)
+					success
 				}
+            }, CommandHandler("millis") { event, args, heuristic ->
+                if (!heuristic) {
+                    var success = false
+                    if (!success) {
+                        if (args.isEmpty()) {
+                            val dateTime = LocalDateTime.now()
+                            val dateTimeAsMillis = dateTime.toInstant(ZoneOffset.UTC).toEpochMilli()
+                            respond(event, "The current date time is `$dateTime` (in ${ZoneOffset.systemDefault()}) which corresponds to `$dateTimeAsMillis` milliseconds since epoch (1970-01-01).")
+                            success = true
+                        }
+                    }
+                    if (!success) {
+                        val millis = args[0].toLongOrNull()
+                        if (millis != null) {
+                            val dateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneId.of("UTC"))
+                            respond(event, "The decimal value `$millis` interpreted as milliseconds since epoch (1970-01-01) corresponds to `$dateTime` in UTC.")
+                            success = true
+                        }
+                    }
+                    if (!success) {
+                        try {
+                            val dateTime = LocalDateTime.parse(args[0])
+                            val dateTimeAsMillis = dateTime.toInstant(ZoneOffset.UTC).toEpochMilli()
+                            respond(event, "The UTC date time `$dateTime` corresponds to `$dateTimeAsMillis` milliseconds since epoch (1970-01-01).")
+                            success = true
+                        } catch (ex: DateTimeParseException) {
+                            // ignore
+                        }
+                    }
+                    if (!success) {
+                        try {
+                            val date = LocalDate.parse(args[0])
+                            val dateAsMillis = date.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+                            respond(event, "The UTC date `$date` corresponds to `$dateAsMillis` milliseconds since epoch (1970-01-01).")
+                            success = true
+                        } catch (ex: DateTimeParseException) {
+                            // ignore
+                        }
+                    }
+                    if (!success) {
+                        respond(event, """
+                                    |`${args[0]}` is not a valid value for milliseconds/date time conversion.
+                                    |It must be either a milliseconds value (like `${System.currentTimeMillis()}`)
+                                    |or a date like `${LocalDate.now()}`
+                                    |or a date time like `${LocalDateTime.now()}`.""".trimMargin())
+                        success = true
+                    }
+                    success
+                } else {
+                    false
+                }
             }, SimpleCommandHandler("pd") { event, arg, heuristic ->
                 if (!heuristic) {
                     respond(event, "Profidata $arg", imageUrl = "http://pdintra/php/mafotos_virt/$arg.jpg")
