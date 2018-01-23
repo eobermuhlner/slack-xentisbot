@@ -450,6 +450,8 @@ class SimpleBot(
 				|$bot syscode 10510000940000aa
 				|$bot syscode C_InstParam_PseudoVerfall
 				|$bot key 1890
+				|$bot millis -11676096000000
+				|$bot millis 1600-01-01
 				|$bot hex c0defeed
 				|$bot dec 1234567890
 				|$bot translate interest
