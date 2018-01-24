@@ -465,6 +465,7 @@ class SimpleBot(
 				|$bot millis 1600-01-01
 				|$bot hex c0defeed
 				|$bot dec 1234567890
+				|$bot xentis intui
 				|$bot translate interest
 				|
 				|If you talk with me without specifying a command, I will try to answer as best as I can (maybe giving multiple answers).
@@ -476,6 +477,8 @@ class SimpleBot(
 				|
 				|If you talk with me in a direct chat you do not need to prefix the messages with my name $bot.
 				|Please try one of the following:
+				|millis 1600-01-01
+				|xentis intui
 				|108300000012be3c
 				|1083
 				|portfolio
@@ -734,7 +737,7 @@ class SimpleBot(
 				if (ex.message == "com.jcraft.jsch.JSchException: Auth cancel") {
 					// ignore
 				} else {
-					respond(event, "User `$arg` on host `$hostname` failed with ${ex.message}")
+					respond(event, "User `$arg` on host `$hostname` failed with ${ex.javaClass.simpleName} ${ex.message}")
 				}
 			}
 		}
