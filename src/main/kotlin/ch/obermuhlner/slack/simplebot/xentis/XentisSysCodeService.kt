@@ -126,7 +126,7 @@ class XentisSysCodeService : SysCodeService {
 		
 		for(syscode in idToSysCode.values) {
 			if (syscode != null) {
-				if (syscode.code.equals(text, ignoreCase = true) || syscode.name.contains(text, ignoreCase = true)) {
+				if (syscode.code.equals(text, ignoreCase = true) || syscode.name.contains(text, ignoreCase = true) || syscode.germanMedium.contains(text, ignoreCase = true) || syscode.englishMedium.contains(text, ignoreCase = true) ) {
 					result.add(syscode)
 				}
 			}

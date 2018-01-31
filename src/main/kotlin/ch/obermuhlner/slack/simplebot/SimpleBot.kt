@@ -80,7 +80,7 @@ class SimpleBot(
 				} else {
 					false
 				}
-			}, SimpleCommandHandler("id") { event, arg, heuristic ->
+			}, SingleArgumentCommandHandler("id") { event, arg, heuristic ->
 				val xentisId = parseXentisId(arg)
 				if (xentisId != null) {
 					respondAnalyzeXentisId(event, xentisId.first, xentisId.second, failMessage = !heuristic)
@@ -90,13 +90,13 @@ class SimpleBot(
 					}
 					false
 				}
-			}, SimpleCommandHandler("syscodes") { event, arg, heuristic ->
+			}, SingleJoinedArgumentCommandHandler("syscodes") { event, arg, heuristic ->
 				if (!heuristic) {
 					respondXentisPartialSysCodeText(event, arg, failMessage = !heuristic)
 				} else {
 					false
 				}
-			}, SimpleCommandHandler("syscode") { event, arg, heuristic ->
+			}, SingleJoinedArgumentCommandHandler("syscode") { event, arg, heuristic ->
 				val xentisId = parseXentisId(arg)
 				if (!heuristic || xentisId != null || arg.startsWith("C_")) {
 					if (xentisId != null) {
@@ -107,7 +107,7 @@ class SimpleBot(
 				} else {
 					false
 				}
-			}, SimpleCommandHandler("classpart") { event, arg, heuristic ->
+			}, SingleArgumentCommandHandler("classpart") { event, arg, heuristic ->
 				val xentisId = parseXentisId(arg, 4)
 				if (xentisId != null) {
 					respondAnalyzeXentisClassPart(event, xentisId.second, failMessage = !heuristic)
@@ -117,27 +117,27 @@ class SimpleBot(
 					}
 					false
 				}
-			}, SimpleCommandHandler("tables") { event, arg, heuristic ->
+			}, SingleArgumentCommandHandler("tables") { event, arg, heuristic ->
 				if (!heuristic || arg.isUpperCase()) {
 					respondXentisPartialTableName(event, arg, failMessage = !heuristic)
 				} else {
 					false
 				}
-			}, SimpleCommandHandler("table") { event, arg, heuristic ->
+			}, SingleArgumentCommandHandler("table") { event, arg, heuristic ->
 				if (!heuristic || arg.isUpperCase()) {
 					respondXentisTableName(event, arg, failMessage = !heuristic)
 				} else {
 					false
 				}
-			}, SimpleCommandHandler("key") { event, arg, heuristic ->
+			}, SingleArgumentCommandHandler("key") { event, arg, heuristic ->
 				respondXentisKey(event, arg, failMessage = !heuristic)
-			}, SimpleCommandHandler("dec") { event, arg, heuristic ->
+			}, SingleArgumentCommandHandler("dec") { event, arg, heuristic ->
 				if (!heuristic) {
 					respondNumberConversion(event, arg.removeSuffix("L"), 10, introMessage = false)
 				} else {
 					false
 				}
-			}, SimpleCommandHandler("hex") { event, arg, heuristic ->
+			}, SingleArgumentCommandHandler("hex") { event, arg, heuristic ->
 				if (!heuristic) {
 					if (arg.startsWith("-0x")) {
 						respondNumberConversion(event, "-" + arg.removePrefix("-0x").removeSuffix("L"), 16, introMessage = false)
@@ -147,7 +147,7 @@ class SimpleBot(
 				} else {
 					false
 				}
-			}, SimpleCommandHandler("bin") { event, arg, heuristic ->
+			}, SingleArgumentCommandHandler("bin") { event, arg, heuristic ->
 				if (!heuristic) {
 					if (arg.startsWith("-0b")) {
 						respondNumberConversion(event, "-" + arg.removePrefix("-0b").removeSuffix("L"), 2, introMessage = false)
@@ -157,7 +157,7 @@ class SimpleBot(
 				} else {
 					false
 				}
-			}, SimpleCommandHandler("number") { event, arg, heuristic ->
+			}, SingleArgumentCommandHandler("number") { event, arg, heuristic ->
 				if (arg.startsWith("0x")) {
 					respondNumberConversion(event, arg.removePrefix("0x").removeSuffix("L"), 16, failMessage = !heuristic, introMessage = false)
 				} else if (arg.startsWith("-0x")) {
@@ -224,28 +224,28 @@ class SimpleBot(
                 } else {
                     false
                 }
-            }, SimpleCommandHandler("pd") { event, arg, heuristic ->
+            }, SingleArgumentCommandHandler("pd") { event, arg, heuristic ->
                 if (!heuristic) {
                     respond(event, "Profidata $arg", imageUrl = "http://pdintra/php/mafotos_virt/$arg.jpg")
 					true
                 } else {
 					false
 				}
-			}, SimpleCommandHandler("image") { event, arg, heuristic ->
+			}, SingleArgumentCommandHandler("image") { event, arg, heuristic ->
 				if (!heuristic) {
 					respond(event, "Image $arg", imageUrl = arg)
 					true
 				} else {
 					false
 				}
-			}, SimpleCommandHandler("xentis") { event, arg, heuristic ->
+			}, SingleArgumentCommandHandler("xentis") { event, arg, heuristic ->
 				if (!heuristic) {
 					respondXentisServerStatus(event, arg)
 					true
 				} else {
 					false
 				}
-            }, SimpleCommandHandler("translate") { event, arg, _ ->
+            }, SingleJoinedArgumentCommandHandler("translate") { event, arg, _ ->
                respondSearchTranslations(event, arg)
 			}
 		)
@@ -723,27 +723,27 @@ class SimpleBot(
 		return true
 	}
 
-	private fun respondXentisServerStatus(event: SlackMessagePosted, arg: String): Boolean {
+	private fun respondXentisServerStatus(event: SlackMessagePosted, username: String): Boolean {
 		var success = false
 		for (hostname in xentisServerHostnames) {
 			try {
-				val shell = SshByPassword(hostname, 22, arg, arg)
+				val shell = SshByPassword(hostname, 22, username, username)
 				val response = Shell.Plain(shell).exec("source .profile; xentis/admin/bin/xentis stat")
 				respond(event, """
-    				|User `$arg` on host `$hostname` responded with:
+    				|User `$username` on host `$hostname` responded with:
     				|```$response```""".trimMargin())
 				success = true
 			} catch (ex: Exception) {
 				if (ex.message == "com.jcraft.jsch.JSchException: Auth cancel") {
 					// ignore
 				} else {
-					respond(event, "User `$arg` on host `$hostname` failed with ${ex.javaClass.simpleName} ${ex.message}")
+					respond(event, "User `$username` on host `$hostname` failed with ${ex.javaClass.simpleName} ${ex.message}")
 				}
 			}
 		}
 
 		if (!success) {
-			respond(event, "No user `$arg` found on any of the hosts ${xentisServerHostnames.joinToString(", ", "`", "`")}.")
+			respond(event, "No user `$username` found on any of the hosts ${xentisServerHostnames.joinToString(", ", "`", "`")}.")
 		}
 
 		return success
