@@ -723,27 +723,42 @@ class SimpleBot(
 		return true
 	}
 
-	private fun respondXentisServerStatus(event: SlackMessagePosted, username: String): Boolean {
+	private fun respondXentisServerStatus(event: SlackMessagePosted, name: String): Boolean {
 		var success = false
-		for (hostname in xentisServerHostnames) {
-			try {
-				val shell = SshByPassword(hostname, 22, username, username)
-				val response = Shell.Plain(shell).exec("source .profile; xentis/admin/bin/xentis stat")
-				respond(event, """
-    				|User `$username` on host `$hostname` responded with:
-    				|```$response```""".trimMargin())
-				success = true
-			} catch (ex: Exception) {
-				if (ex.message == "com.jcraft.jsch.JSchException: Auth cancel") {
-					// ignore
-				} else {
-					respond(event, "User `$username` on host `$hostname` failed with ${ex.javaClass.simpleName} ${ex.message}")
-				}
-			}
-		}
 
-		if (!success) {
-			respond(event, "No user `$username` found on any of the hosts ${xentisServerHostnames.joinToString(", ", "`", "`")}.")
+        if (name.startsWith("pdvmapp")) {
+            try {
+				respond(event, "Checking xentis server $name")
+                val shell = SshByPassword(name, 22, "xen", "xen")
+				val response = Shell.Plain(shell).exec("pwd")
+                respond(event, """
+    				|User `xen` on host `$name` responded with:
+    				|```$response```""".trimMargin())
+                success = true
+            } catch (ex: Exception) {
+				respond(event, "User `xen` on host `$name` failed with ${ex.javaClass.simpleName} ${ex.message}")
+            }
+        } else {
+            // old xentis servers
+            for (hostname in xentisServerHostnames) {
+                try {
+                    val shell = SshByPassword(hostname, 22, name, name)
+                    val response = Shell.Plain(shell).exec("source .profile; xentis/admin/bin/xentis stat")
+                    respond(event, """
+    				|User `$name` on host `$hostname` responded with:
+    				|```$response```""".trimMargin())
+                    success = true
+                } catch (ex: Exception) {
+                    if (ex.message == "com.jcraft.jsch.JSchException: Auth cancel") {
+                        // ignore
+                    } else {
+                        respond(event, "User `$name` on host `$hostname` failed with ${ex.javaClass.simpleName} ${ex.message}")
+                    }
+                }
+            }
+			if (!success) {
+				respond(event, "No user `$name` found on any of the hosts ${xentisServerHostnames.joinToString(", ", "`", "`")}.")
+			}
 		}
 
 		return success
@@ -783,7 +798,8 @@ class SimpleBot(
 			}, { _ ->
 				message += "...)\n"
 			})
-		} else if (partialResults.size > 0) {
+		}
+		if (partialResults.size > perfectResults.size) {
 			val translations = plural(partialResults.size, "translation", "translations")
 			message = "Found ${partialResults.size} $translations that partially matched this term:\n"
 			limitedForLoop(10, 0, sortedTranslations(partialResults), { result ->
