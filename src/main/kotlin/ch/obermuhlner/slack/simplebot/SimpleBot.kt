@@ -789,32 +789,33 @@ class SimpleBot(
 			}
 		}
 
-		var message: String
 		if (perfectResults.size > 0) {
 			val translations = plural(perfectResults.size, "translation", "translations")
-			message = "Found ${perfectResults.size} $translations for exactly this term:\n"
+			var message = "Found ${perfectResults.size} $translations for exactly this term:\n"
 			limitedForLoop(10, 0, sortedTranslations(perfectResults), { result ->
 				message += "_${result.english}_ : _${result.german}_ \n"
 			}, { _ ->
 				message += "...)\n"
 			})
+			session.sendMessage(event.channel, message)
 		}
+
 		if (partialResults.size > perfectResults.size) {
 			val translations = plural(partialResults.size, "translation", "translations")
-			message = "Found ${partialResults.size} $translations that partially matched this term:\n"
+			var message = "Found ${partialResults.size} $translations that partially matched this term:\n"
 			limitedForLoop(10, 0, sortedTranslations(partialResults), { result ->
 				message += "_${result.english}_ : _${result.german}_ \n"
 			}, { _ ->
 				message += "...\n"
 			})
+			session.sendMessage(event.channel, message)
 		} else {
-			message = "No translations found."
+			var message = "No translations found."
 			if (!failMessage) {
 				return false
 			}
+			session.sendMessage(event.channel, message)
 		}
-
-		session.sendMessage(event.channel, message)
 		return true
 	}
 
