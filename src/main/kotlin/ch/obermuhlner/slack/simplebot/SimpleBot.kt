@@ -27,7 +27,10 @@ class SimpleBot(
 		private val propertiesTranslations: PropertiesTranslationService = XentisPropertiesTranslationService(),
 		private val dbSchemaService: DbSchemaService = XentisDbSchemaService(),
 		private val keyMigrationService: KeyMigrationService = XentisKeyMigrationService(),
-		private var xentisServerHostnames: List<String> = listOf()) {
+		private var xentisServerSearchHostnames: List<String> = listOf(),
+		private var xentisServerSearchCommand: String = "xentis stat",
+		private var xentisServerPrefixHost: String = "pdvmapp",
+		private var xentisServerPrefixCommand: String = "xentis stat") {
 
 	private lateinit var session: SlackSession
 	private lateinit var user: SlackUser
@@ -278,7 +281,10 @@ class SimpleBot(
 
 		user = session.user()
 		adminUser = findUser(properties.getProperty("admin.user"))
-		xentisServerHostnames = properties.getProperty("xentis.hosts").split(",").map {it.trim()}
+		xentisServerSearchHostnames = properties.getProperty("xentis.server.search.hosts").split(",").map {it.trim()}
+		xentisServerSearchCommand = properties.getProperty("xentis.server.search.command", xentisServerSearchCommand)
+		xentisServerPrefixHost = properties.getProperty("xentis.server.prefix.host", xentisServerPrefixHost)
+		xentisServerPrefixCommand = properties.getProperty("xentis.server.prefix.command", xentisServerPrefixCommand)
 
 		val xentisSchemaFileName = properties.getProperty("xentis.schema")
 		if (xentisSchemaFileName != null) {
@@ -726,11 +732,11 @@ class SimpleBot(
 	private fun respondXentisServerStatus(event: SlackMessagePosted, name: String): Boolean {
 		var success = false
 
-        if (name.startsWith("pdvmapp")) {
+        if (name.startsWith(xentisServerPrefixHost)) {
             try {
 				respond(event, "Checking xentis server $name")
                 val shell = SshByPassword(name, 22, "xen", "xen")
-				val response = Shell.Plain(shell).exec("xentis stat")
+				val response = Shell.Plain(shell).exec(xentisServerPrefixCommand)
                 respond(event, """
     				|User `xen` on host `$name` responded with:
     				|```$response```""".trimMargin())
@@ -740,10 +746,10 @@ class SimpleBot(
             }
         } else {
             // old xentis servers
-            for (hostname in xentisServerHostnames) {
+            for (hostname in xentisServerSearchHostnames) {
                 try {
                     val shell = SshByPassword(hostname, 22, name, name)
-                    val response = Shell.Plain(shell).exec("source .profile; xentis/admin/bin/xentis stat")
+                    val response = Shell.Plain(shell).exec(xentisServerSearchCommand)
                     respond(event, """
     				|User `$name` on host `$hostname` responded with:
     				|```$response```""".trimMargin())
@@ -757,7 +763,7 @@ class SimpleBot(
                 }
             }
 			if (!success) {
-				respond(event, "No user `$name` found on any of the hosts ${xentisServerHostnames.joinToString(", ", "`", "`")}.")
+				respond(event, "No user `$name` found on any of the hosts ${xentisServerSearchHostnames.joinToString(", ", "`", "`")}.")
 			}
 		}
 
