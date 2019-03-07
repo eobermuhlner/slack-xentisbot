@@ -730,7 +730,7 @@ class SimpleBot(
             try {
 				respond(event, "Checking xentis server $name")
                 val shell = SshByPassword(name, 22, "xen", "xen")
-				val response = Shell.Plain(shell).exec("pwd")
+				val response = Shell.Plain(shell).exec("xentis stat")
                 respond(event, """
     				|User `xen` on host `$name` responded with:
     				|```$response```""".trimMargin())
