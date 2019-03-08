@@ -3,7 +3,6 @@ package ch.obermuhlner.slack.simplebot
 import ch.obermuhlner.slack.simplebot.TranslationService.Translation
 import ch.obermuhlner.slack.simplebot.xentis.*
 import java.util.Properties
-import java.io.FileReader
 import com.ullink.slack.simpleslackapi.impl.SlackSessionFactory
 import com.ullink.slack.simpleslackapi.SlackUser
 import com.google.gson.GsonBuilder
@@ -13,14 +12,18 @@ import com.ullink.slack.simpleslackapi.SlackChannel
 import com.ullink.slack.simpleslackapi.SlackSession
 import com.ullink.slack.simpleslackapi.events.SlackMessagePosted
 import com.ullink.slack.simpleslackapi.impl.ChannelHistoryModuleFactory
-import java.io.BufferedReader
 import java.util.regex.Pattern
-import java.io.PrintWriter
-import java.io.StringWriter
 import java.time.*
 import java.time.format.DateTimeParseException
 import com.jcabi.ssh.Shell
 import com.jcabi.ssh.SshByPassword
+import org.ccil.cowan.tagsoup.jaxp.SAXParserImpl
+import org.xml.sax.Attributes
+import org.xml.sax.SAXParseException
+import org.xml.sax.helpers.DefaultHandler
+import java.io.*
+import java.net.URL
+import javax.xml.parsers.SAXParserFactory
 
 class SimpleBot(
 		private val sysCodeService: SysCodeService = XentisSysCodeService(),
@@ -241,13 +244,20 @@ class SimpleBot(
 				} else {
 					false
 				}
-			}, SingleArgumentCommandHandler("xentis") { event, arg, heuristic ->
-				if (!heuristic) {
-					respondXentisServerStatus(event, arg)
-					true
-				} else {
-					false
-				}
+            }, SingleArgumentCommandHandler("xentis") { event, arg, heuristic ->
+                if (!heuristic) {
+                    respondXentisServerStatus(event, arg)
+                    true
+                } else {
+                    false
+                }
+            }, SingleArgumentCommandHandler("db") { event, arg, heuristic ->
+                if (!heuristic) {
+                    respondXentisDbStatus(event, arg)
+                    true
+                } else {
+                    false
+                }
             }, SingleJoinedArgumentCommandHandler("translate") { event, arg, _ ->
                respondSearchTranslations(event, arg)
 			}
@@ -769,6 +779,75 @@ class SimpleBot(
 
 		return success
 	}
+
+    private fun respondXentisDbStatus(event: SlackMessagePosted, name: String): Boolean {
+        var success = false
+
+		val message = StringBuilder()
+		val line = StringBuilder()
+		var tdClass: String? = null
+
+		val searchableClasses = setOf("servicename", "schemaname", "size", "impdat", "responsible", "locked", "comment")
+		val noHeaderClasses = setOf("servicename", "schemaname")
+
+        val handler = object : DefaultHandler() {
+            private var insideTr: Boolean = false
+            private var insideTd: Boolean = false
+
+            override fun startElement(uri: String?, localName: String, qName: String, attributes: Attributes) {
+                if (localName == "tr") {
+                    insideTr = true
+                }
+                if (insideTr && localName == "td") {
+                    insideTd = true
+					tdClass = attributes.getValue("class")
+                }
+            }
+
+            override fun endElement(uri: String, localName: String, qName: String) {
+                if (localName == "tr") {
+                    insideTr = false
+
+					if (line.contains(name)) {
+						message.append(line)
+						message.append("\n")
+						if (message.length > 2000) {
+							respond(event, message.toString())
+							success = true
+							message.setLength(0)
+						}
+					}
+					line.setLength(0)
+                }
+                if (insideTr && localName == "td") {
+                    insideTd = false
+                }
+            }
+
+            override fun characters(ch: CharArray, start: Int, length: Int) {
+				val text = String(ch, start, length)
+				if (searchableClasses.contains(tdClass) && text != "N.A.") {
+					if (!noHeaderClasses.contains(tdClass)) {
+						line.append(tdClass)
+					}
+					line.append(" `")
+					line.append(text)
+					line.append("` ")
+				}
+            }
+        }
+
+        val url = URL("http://dbschemas/")
+		val parser = SAXParserImpl.newInstance(null)
+        parser.parse(url.openStream(), handler)
+
+		if (message.isNotEmpty()) {
+			respond(event, message.toString())
+			success = true
+		}
+
+		return success
+    }
 
 	private fun respondSearchTranslations(event: SlackMessagePosted, text: String, failMessage: Boolean=true): Boolean {
 		if (text == "") {

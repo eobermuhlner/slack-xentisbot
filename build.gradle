@@ -10,6 +10,7 @@ buildscript {
     ext.perforceapi_version = '2017.2.1595481'
     ext.slf4j_version = '1.7.25'
     ext.jcabissh_version = '1.6'
+    ext.tagsoup_version = '1.2'
 
     repositories {
         mavenCentral()
@@ -30,8 +31,9 @@ dependencies {
             "com.ullink.slack:simpleslackapi:$slackapi_version",
             "com.perforce:p4java:$perforceapi_version",
             "org.slf4j:slf4j-simple:$slf4j_version",
-            "com.jcabi:jcabi-ssh:$jcabissh_version"
+            "com.jcabi:jcabi-ssh:$jcabissh_version",
+            "org.ccil.cowan.tagsoup:tagsoup:$tagsoup_version"
     )
-    
+
     testCompile 'junit:junit:4.12'
 }
