@@ -787,8 +787,15 @@ class SimpleBot(
 		val line = StringBuilder()
 		var tdClass: String? = null
 
-		val searchableClasses = setOf("servicename", "schemaname", "size", "impdat", "responsible", "locked", "comment")
-		val noHeaderClasses = setOf("servicename", "schemaname")
+        val classPadding: Map<String, Int> = mapOf(
+                "servicename" to 7,
+                "schemaname" to 30,
+                "size" to 6,
+                "impdat" to 8,
+                "responsible" to 10,
+                "locked" to 10,
+                "comment" to 30)
+        val classLeftPadding: Set<String> = setOf("size")
 
         val handler = object : DefaultHandler() {
             private var insideTr: Boolean = false
@@ -811,8 +818,8 @@ class SimpleBot(
 					if (line.contains(name)) {
 						message.append(line)
 						message.append("\n")
-						if (message.length > 2000) {
-							respond(event, message.toString())
+						if (message.length > 3000) {
+							respond(event, "```\n$message\n```")
 							success = true
 							message.setLength(0)
 						}
@@ -826,13 +833,14 @@ class SimpleBot(
 
             override fun characters(ch: CharArray, start: Int, length: Int) {
 				val text = String(ch, start, length)
-				if (searchableClasses.contains(tdClass) && text != "N.A.") {
-					if (!noHeaderClasses.contains(tdClass)) {
-						line.append(tdClass)
-					}
-					line.append(" `")
-					line.append(text)
-					line.append("` ")
+				if (classPadding.containsKey(tdClass) && text != "N.A.") {
+                    val paddedText = if (classLeftPadding.contains(tdClass)) {
+                            text.padStart(classPadding[tdClass]!!)
+                        } else {
+                            text.padEnd(classPadding[tdClass]!!)
+                        }
+                    line.append(paddedText)
+                    line.append(" ")
 				}
             }
         }
@@ -842,9 +850,11 @@ class SimpleBot(
         parser.parse(url.openStream(), handler)
 
 		if (message.isNotEmpty()) {
-			respond(event, message.toString())
+			respond(event, "```\n$message\n```")
 			success = true
-		}
+		} else {
+            session.sendMessage(event.channel, "No database found.")
+        }
 
 		return success
     }
